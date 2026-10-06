@@ -164,7 +164,7 @@ function pantallaMas(d) {
     enlace('#/precios/general', '🏷️ Lista general de precios'), enlace('#/gallinas', '🐔 Vender gallinas (enfermas o recambio)'), enlace('#/proveedores', '🚚 Proveedores'),
   ] : [];
   return h('div', {}, h('h1', {}, 'Más'), h('ul', { class: 'lista' }, lista),
-    tarjeta(h('div', { class: 'suave' }, `Sesión: ${sesion.usuario} · Versión ${VERSION_APP}`), h('div', { style: 'height:10px' }),
+    tarjeta(h('div', { class: 'suave' }, `Sesión: ${sesion.usuario} · Versión ${VERSION_APP}`), [API.estado.diagLogin, API.estado.diag].filter(Boolean).map((x) => h('div', { class: 'suave' }, `${x.accion}: ${(x.total / 1000).toFixed(1)} s en total${x.servidor !== undefined ? ' (servidor ' + (x.servidor / 1000).toFixed(1) + ' s)' : ''}`)), h('div', { style: 'height:10px' }),
       boton('🚪 Cerrar sesión', cerrarSesionUI, { clase: 'secundario' })));
 }
 

@@ -83,7 +83,7 @@ export function crearSandbox() {
   const sandbox = {
     console, Date, JSON, Math, Number, String, Object, Array, isFinite, Error, RegExp, Buffer,
     SpreadsheetApp: { getActiveSpreadsheet: () => libro, getUi: () => { throw new Error('sin interfaz en pruebas'); } },
-    PropertiesService: { getScriptProperties: () => ({ getProperty: (k) => (props.has(k) ? props.get(k) : null), setProperty: (k, v) => props.set(k, String(v)) }) },
+    PropertiesService: { getScriptProperties: () => ({ getProperty: (k) => (props.has(k) ? props.get(k) : null), setProperty: (k, v) => props.set(k, String(v)), getProperties: () => Object.fromEntries(props) }) },
     CacheService: { getScriptCache: () => ({ get: (k) => (cache.has(k) ? cache.get(k) : null), put: (k, v) => cache.set(k, v), remove: (k) => cache.delete(k) }) },
     LockService: { getScriptLock: () => ({ waitLock() {}, tryLock() { return !sandboxOcupado.valor; }, releaseLock() {} }) },
     Logger: { log() {} },

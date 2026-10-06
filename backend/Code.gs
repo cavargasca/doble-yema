@@ -6,7 +6,7 @@
  * Pasos de instalación: ver docs/INSTALACION.md
  */
 
-const VERSION = '0.1.4';
+const VERSION = '0.1.5';
 const TOKEN_DIAS = 30;
 const MAX_FALLOS = 5;
 const BLOQUEO_SEG = 600;
@@ -117,7 +117,10 @@ function doGet() {
   return json_({ ok: true, servicio: 'Doble Yema API', version: VERSION });
 }
 
+let inicioMs_ = 0;
+
 function doPost(e) {
+  inicioMs_ = Date.now();
   let req;
   try {
     req = JSON.parse(e.postData.contents);
@@ -149,6 +152,7 @@ function doPost(e) {
 }
 
 function json_(obj) {
+  if (obj && typeof obj === 'object' && obj.ms === undefined && typeof inicioMs_ === 'number') obj.ms = Date.now() - inicioMs_;
   return ContentService.createTextOutput(JSON.stringify(obj)).setMimeType(ContentService.MimeType.JSON);
 }
 
@@ -168,12 +172,19 @@ function hashPin_(salt, pin) {
   return bytesAHex_(Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, salt + ':' + pin, Utilities.Charset.UTF_8));
 }
 
+let propsCache_ = null;
+// Se leen todas las propiedades de una vez (cada lectura suelta cuesta ~0,1-0,3 s en Apps Script).
+function props_() {
+  if (!propsCache_) propsCache_ = PropertiesService.getScriptProperties().getProperties() || {};
+  return propsCache_;
+}
+
 function secreto_() {
-  const props = PropertiesService.getScriptProperties();
-  let s = props.getProperty('SECRET');
+  let s = props_().SECRET;
   if (!s) {
     s = Utilities.getUuid() + Utilities.getUuid();
-    props.setProperty('SECRET', s);
+    PropertiesService.getScriptProperties().setProperty('SECRET', s);
+    propsCache_ = null;
   }
   return s;
 }
@@ -189,6 +200,7 @@ function guardarPin_(usuario, pin) {
   const salt = Utilities.getUuid();
   props.setProperty('PIN_' + usuario, salt + '$' + hashPin_(salt, String(pin)));
   props.setProperty('PINV_' + usuario, String((Number(props.getProperty('PINV_' + usuario)) || 0) + 1));
+  propsCache_ = null;
 }
 
 function login_(req) {
@@ -198,8 +210,7 @@ function login_(req) {
   const clave = 'fallos_' + usuario;
   const fallos = Number(cache.get(clave)) || 0;
   if (fallos >= MAX_FALLOS) throw errorCodigo_('Demasiados intentos. Espera 10 minutos.', 'BLOQUEO');
-  const props = PropertiesService.getScriptProperties();
-  const guardado = props.getProperty('PIN_' + usuario);
+  const guardado = props_()['PIN_' + usuario];
   if (!guardado) throw errorCodigo_('El PIN aún no está configurado. Abre la hoja de cálculo y usa el menú Doble Yema.', 'SIN_PIN');
   const partes = guardado.split('$');
   const ok = hashPin_(partes[0], String(req.pin || '')) === partes[1];
@@ -207,9 +218,9 @@ function login_(req) {
     cache.put(clave, String(fallos + 1), BLOQUEO_SEG);
     throw errorCodigo_('Usuario o PIN incorrecto', 'LOGIN');
   }
-  cache.remove(clave);
+  if (fallos) cache.remove(clave);
   const exp = Date.now() + TOKEN_DIAS * 86400000;
-  const payload = Utilities.base64EncodeWebSafe(JSON.stringify({ u: usuario, r: usuario, exp: exp, v: props.getProperty('PINV_' + usuario) || '0' }));
+  const payload = Utilities.base64EncodeWebSafe(JSON.stringify({ u: usuario, r: usuario, exp: exp, v: props_()['PINV_' + usuario] || '0' }));
   return { ok: true, token: payload + '.' + firmar_(payload), usuario: usuario, role: usuario, exp: exp };
 }
 
@@ -223,7 +234,7 @@ function auth_(token) {
     throw errorCodigo_('Sesión inválida. Vuelve a entrar.', 'AUTH');
   }
   if (!datos.exp || datos.exp < Date.now()) throw errorCodigo_('La sesión venció. Vuelve a entrar.', 'AUTH');
-  const v = PropertiesService.getScriptProperties().getProperty('PINV_' + datos.u) || '0';
+  const v = props_()['PINV_' + datos.u] || '0';
   if (String(datos.v) !== v) throw errorCodigo_('El PIN cambió. Vuelve a entrar.', 'AUTH');
   return { usuario: datos.u, role: datos.r };
 }

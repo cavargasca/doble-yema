@@ -14,8 +14,12 @@ async function llamar(cuerpo, ms = 60000) {
   const ctrl = new AbortController();
   const timer = setTimeout(() => ctrl.abort(), ms);
   try {
+    const t0 = performance.now();
     const resp = await fetch(API_URL, { method: 'POST', body: JSON.stringify(cuerpo), redirect: 'follow', signal: ctrl.signal });
     const datos = await resp.json();
+    // Para saber dónde se va el tiempo: total (red + servidor) y lo que tardó el servidor trabajando.
+    estado.diag = { accion: cuerpo.action, total: Math.round(performance.now() - t0), servidor: datos.ms };
+    if (cuerpo.action === 'login') estado.diagLogin = estado.diag;
     if (!datos.ok) throw Object.assign(new Error(datos.error || 'Error del servidor'), { codigo: datos.code || 'ERROR' });
     return datos;
   } catch (e) {
