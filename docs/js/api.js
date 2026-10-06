@@ -26,6 +26,9 @@ async function llamar(cuerpo, ms = 60000) {
   }
 }
 
+// Despierta el servidor mientras la persona escribe su PIN (la primera llamada del día suele tardar).
+export function calentar() { if (API_URL && navigator.onLine) llamar({ action: 'ping' }, 15000).catch(() => {}); }
+
 export async function entrar(usuario, pin) {
   const r = await llamar({ action: 'login', usuario, pin });
   await S.setMeta('token', r.token);
@@ -34,6 +37,8 @@ export async function entrar(usuario, pin) {
   await S.setMeta('exp', r.exp);
   return r;
 }
+
+export async function primeraCarga() { return !(await S.getMeta('ultimoCompleto')); }
 
 export async function sesion() {
   const [token, usuario, role, exp] = await Promise.all(['token', 'usuario', 'role', 'exp'].map(S.getMeta));
@@ -95,7 +100,9 @@ async function traer(token, completo) {
     else await S.mezclar(tabla, filas);
   }
   await S.setMeta('ultimoPull', r.server_time);
+  const recibidas = Object.values(r.tablas).reduce((a, f) => a + f.length, 0);
   if (!desde) await S.setMeta('ultimoCompleto', Date.now());
+  return recibidas;
 }
 
 let enCurso = null;
@@ -104,17 +111,18 @@ let enCurso = null;
 export function sincronizar({ completo = false } = {}) {
   if (enCurso) return enCurso;
   enCurso = (async () => {
-    estado.sincronizando = true; estado.mensaje = '';
+    estado.sincronizando = true; estado.mensaje = ''; estado.cambios = false;
     avisar();
     try {
       const s = await sesion();
       if (!s) return { ok: false, codigo: 'SIN_SESION' };
       estado.enLinea = navigator.onLine;
       if (!navigator.onLine) return { ok: false, codigo: 'RED' };
-      await enviarCola(s.token);
+      const enviados = await enviarCola(s.token);
       const ultimoCompleto = (await S.getMeta('ultimoCompleto')) || 0;
       const toca = completo || Date.now() - ultimoCompleto > 3600000;
-      await traer(s.token, toca);
+      const recibidas = await traer(s.token, toca);
+      estado.cambios = enviados + recibidas > 0; // si no cambió nada, la pantalla no se redibuja
       estado.ultimaSync = Date.now();
       estado.enLinea = true;
       return { ok: true };
@@ -145,6 +153,6 @@ export function iniciarSincronizacionAutomatica() {
   window.addEventListener('online', () => { estado.enLinea = true; avisar(); sincronizar(); });
   window.addEventListener('offline', () => { estado.enLinea = false; avisar(); });
   document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') sincronizar(); });
-  setInterval(() => { if (navigator.onLine) sincronizar(); }, 60000);
+  setInterval(() => { if (navigator.onLine && document.visibilityState === 'visible') sincronizar(); }, 60000);
   sincronizar();
 }

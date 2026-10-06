@@ -221,3 +221,17 @@ test('producción con total de huevos: una hoja antigua sin la columna "huevos" 
   const fila = pull.tablas.Produccion.find((x) => x.id === 'prod-h');
   assert.equal(Number(fila.huevos), 187);
 });
+
+test('pull incremental: sin cambios responde vacío y rápido; con cambios devuelve lo nuevo', async () => {
+  const t = preparar();
+  const p0 = t.llamar({ action: 'pull', token: t.ger });
+  assert.ok(p0.tablas.Lotes.length === 15);
+  const p1 = t.llamar({ action: 'pull', token: t.ger, since: p0.server_time });
+  assert.equal(p1.sin_cambios, true);
+  assert.deepEqual(p1.tablas, {});
+  await new Promise((r) => setTimeout(r, 5));
+  t.llamar({ action: 'sync', token: t.ger, records: [{ entity: 'Clientes', record: { id: 'c-xyz1', nombre: 'Nuevo', condicion_pago: 'contado', estado: 'activo', ts: 1 } }] });
+  const p2 = t.llamar({ action: 'pull', token: t.ger, since: p0.server_time });
+  assert.ok(!p2.sin_cambios);
+  assert.equal(p2.tablas.Clientes.length, 1);
+});

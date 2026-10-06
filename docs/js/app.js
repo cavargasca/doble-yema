@@ -42,7 +42,8 @@ async function detallesSync() {
   else toast('✓ Todo sincronizado');
 }
 
-function marco(titulo, contenido, { atras = true } = {}) {
+function marco(titulo, contenido, { atras = true, conservar = false } = {}) {
+  const y = window.scrollY;
   vaciar(raiz);
   raiz.append(
     h('header', { class: 'barra-sup' },
@@ -51,13 +52,14 @@ function marco(titulo, contenido, { atras = true } = {}) {
       h('div', { class: 'marca' }, '🥚 ' + titulo), chip,
       h('button', { class: 'atras salir', type: 'button', 'aria-label': 'Cerrar sesión', title: 'Cerrar sesión', onclick: cerrarSesionUI }, '🚪')),
     h('main', {}, contenido, atras ? null : h('div', { style: 'margin-top:24px' }, boton('🚪 Cerrar sesión', cerrarSesionUI, { clase: 'secundario' }))));
-  window.scrollTo(0, 0);
+  window.scrollTo(0, conservar ? y : 0);
   pintarChip();
 }
 
 // ---------- login ----------
 function pantallaLogin(mensaje) {
   vaciar(raiz);
+  API.calentar();
   let usuario = 'gerente';
   const pin = h('input', { class: 'input pin-input', type: 'password', inputmode: 'numeric', autocomplete: 'current-password', maxlength: 8, placeholder: '••••' });
   const msg = h('div', {});
@@ -68,7 +70,7 @@ function pantallaLogin(mensaje) {
     try {
       await API.entrar(usuario, pin.value);
       sesion = await API.sesion();
-      await API.sincronizar({ completo: true });
+      // Se entra de una vez; los datos se descargan en segundo plano (la pantalla se actualiza sola al terminar).
       iniciarApp();
     } catch (e) {
       vaciar(msg).append(aviso_caja(e.codigo === 'RED' ? 'Sin señal. Para entrar por primera vez necesitas internet.' : e.message, 'rojo'));
@@ -86,7 +88,7 @@ function pantallaLogin(mensaje) {
 const esGerente = () => sesion && sesion.role === 'gerente';
 const cerrar = (titulo) => marco(titulo, h('div', {}));
 
-async function renderizar() {
+async function renderizar({ conservar = false } = {}) {
   if (!sesion) return pantallaLogin();
   const hash = (location.hash || '#/').replace(/^#/, '');
   const [rutaTxt, consulta] = hash.split('?');
@@ -127,7 +129,8 @@ async function renderizar() {
     console.error(e);
     vista = h('div', {}, aviso_caja('Algo falló al mostrar esta pantalla: ' + e.message, 'rojo'));
   }
-  marco(titulo, vista, { atras });
+  if (!atras && await API.primeraCarga()) vista = h('div', {}, aviso_caja('⏳ Descargando tus datos por primera vez… un momento.', 'info'), vista);
+  marco(titulo, vista, { atras, conservar });
   vistaActual = { ruta: a || '' };
 }
 
@@ -172,7 +175,7 @@ function iniciarApp() {
     const termino = antes && !e.sincronizando;
     antes = e.sincronizando;
     // Al terminar una sincronización se refrescan solo las pantallas de consulta (no los formularios).
-    if (termino && sesion && ['', 'clientes', 'resumen', 'ventas', 'gastos', 'mas'].includes(vistaActual.ruta) && !/\/(nuevo|editar)/.test(location.hash)) renderizar();
+    if (termino && e.cambios && sesion && ['', 'clientes', 'resumen', 'ventas', 'gastos', 'mas'].includes(vistaActual.ruta) && !/\/(nuevo|editar)/.test(location.hash)) renderizar({ conservar: true });
   });
   if (!location.hash) location.hash = '#/';
   renderizar();

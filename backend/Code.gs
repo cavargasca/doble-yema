@@ -6,7 +6,7 @@
  * Pasos de instalación: ver docs/INSTALACION.md
  */
 
-const VERSION = '0.1.3';
+const VERSION = '0.1.4';
 const TOKEN_DIAS = 30;
 const MAX_FALLOS = 5;
 const BLOQUEO_SEG = 600;
@@ -293,27 +293,46 @@ function filaAObjeto_(nombre, encabezado, fila) {
   return obj;
 }
 
-function leerHoja_(nombre, since) {
-  const hoja = libro_().getSheetByName(nombre);
-  if (!hoja || hoja.getLastRow() < 2) return [];
-  const encabezado = leerEncabezado_(hoja);
-  const filas = hoja.getRange(2, 1, hoja.getLastRow() - 1, encabezado.length).getValues();
+function leerHoja_(nombre, since, hojaDada) {
+  const hoja = hojaDada || libro_().getSheetByName(nombre);
+  if (!hoja) return [];
+  const ultimaFila = hoja.getLastRow();
+  const ultimaCol = hoja.getLastColumn();
+  if (ultimaFila < 2 || ultimaCol < 1) return [];
+  // Una sola lectura (encabezado + datos) en vez de varias: cada llamada a Hojas de cálculo cuesta tiempo.
+  const todo = hoja.getRange(1, 1, ultimaFila, ultimaCol).getValues();
+  const encabezado = todo[0].map(String);
   const iUpd = encabezado.indexOf('upd');
   const salida = [];
-  filas.forEach(function (f) {
-    if (!f[0]) return;
-    if (since && iUpd >= 0 && (Number(f[iUpd]) || 0) <= since) return;
+  for (let i = 1; i < todo.length; i++) {
+    const f = todo[i];
+    if (!f[0]) continue;
+    if (since && iUpd >= 0 && (Number(f[iUpd]) || 0) <= since) continue;
     salida.push(filaAObjeto_(nombre, encabezado, f));
-  });
+  }
   return salida;
+}
+
+// Marca de "última vez que cambió algo". Si el celular ya está al día, el servidor responde sin leer ninguna hoja.
+function marcarCambio_() {
+  try { CacheService.getScriptCache().put('lw', String(ahoraMs_()), 21600); } catch (e) { /* solo optimización */ }
 }
 
 function pull_(auth, since) {
   const serverTime = ahoraMs_();
+  const desde = Number(since) || 0;
+  const cache = CacheService.getScriptCache();
+  const lw = Number(cache.get('lw')) || 0;
+  if (desde && lw && desde >= lw) {
+    return { tablas: {}, server_time: serverTime, usuario: auth.usuario, role: auth.role, sin_cambios: true };
+  }
+  const porNombre = {};
+  libro_().getSheets().forEach(function (h) { porNombre[h.getName()] = h; });
   const tablas = {};
   Object.keys(SCHEMA).forEach(function (nombre) {
-    if (SCHEMA[nombre].read.indexOf(auth.role) >= 0) tablas[nombre] = leerHoja_(nombre, Number(since) || 0);
+    if (SCHEMA[nombre].read.indexOf(auth.role) >= 0) tablas[nombre] = leerHoja_(nombre, desde, porNombre[nombre]);
   });
+  if (!lw) { try { cache.put('lw', String(serverTime), 21600); } catch (e) { /* ignorar */ } }
   return { tablas: tablas, server_time: serverTime, usuario: auth.usuario, role: auth.role };
 }
 
@@ -462,6 +481,7 @@ function sync_(auth, lista) {
       const hoja = asegurarHoja_('Auditoria');
       hoja.getRange(hoja.getLastRow() + 1, 1, auditoria.length, AUDITORIA_COLS.length).setValues(auditoria);
     }
+    marcarCambio_();
     return resultados;
   } finally {
     lock.releaseLock();
@@ -518,6 +538,7 @@ function onEdit(e) {
     for (let f = e.range.getRow(); f < e.range.getRow() + e.range.getNumRows(); f++) {
       if (f > 1) hoja.getRange(f, iUpd + 1).setValue(ahoraMs_());
     }
+    CacheService.getScriptCache().remove('lw');
   } catch (err) { /* nunca debe interrumpir la edición */ }
 }
 

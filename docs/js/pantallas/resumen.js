@@ -21,10 +21,12 @@ export function dineroPorMedio(d) {
   });
 }
 
+let periodoElegido = 'semana'; // se conserva al actualizarse la pantalla
+
 export function resumen(d) {
   const hoy = hoyISO();
   const periodos = { hoy: [hoy, hoy], semana: [inicioSemana(hoy), hoy], mes: [inicioMes(hoy), hoy], d30: [addDias(hoy, -29), hoy] };
-  let per = 'semana';
+  let per = periodoElegido;
   const cont = h('div', {});
   const pintar = () => {
     vaciar(cont);
@@ -73,7 +75,7 @@ export function resumen(d) {
   };
   pintar();
   return h('div', {}, h('h1', {}, 'Resumen'), alertasInicio(d),
-    h('div', { style: 'margin-bottom:12px' }, fichas([{ valor: 'hoy', texto: 'Hoy' }, { valor: 'semana', texto: 'Esta semana' }, { valor: 'mes', texto: 'Este mes' }, { valor: 'd30', texto: '30 días' }], { valor: per, onChange: (v) => { per = v; pintar(); } })), cont);
+    h('div', { style: 'margin-bottom:12px' }, fichas([{ valor: 'hoy', texto: 'Hoy' }, { valor: 'semana', texto: 'Esta semana' }, { valor: 'mes', texto: 'Este mes' }, { valor: 'd30', texto: '30 días' }], { valor: per, onChange: (v) => { per = v; periodoElegido = v; pintar(); } })), cont);
 }
 
 function arqueo(esperado) {
