@@ -115,10 +115,23 @@ export function stepper({ valor = 0, min = 0, max = 100000, paso = 1, decimales 
     if (onChange) onChange(v);
   });
   input.addEventListener('change', () => poner(aDecimal(input.value)));
-  const el = h('div', { class: 'stepper' },
-    h('button', { type: 'button', class: 'step-btn', 'aria-label': 'menos', onclick: () => poner(v - paso) }, '−'),
-    input,
-    h('button', { type: 'button', class: 'step-btn', 'aria-label': 'más', onclick: () => poner(v + paso) }, '+'));
+  // Un toque suma/resta de inmediato; manteniendo pulsado se repite (y acelera). Así no hay que tocar decenas de veces.
+  const boton = (etiqueta, texto, signo) => {
+    let espera = null; let repite = null; let tocado = false; let ticks = 0;
+    const parar = () => { clearTimeout(espera); clearInterval(repite); setTimeout(() => { tocado = false; }, 400); };
+    const b = h('button', { type: 'button', class: 'step-btn', 'aria-label': etiqueta }, texto);
+    b.addEventListener('pointerdown', (e) => {
+      if (e.button > 0) return;
+      tocado = true; ticks = 0;
+      poner(v + signo * paso);
+      espera = setTimeout(() => { repite = setInterval(() => { ticks++; poner(v + signo * paso * (decimales === 0 && ticks > 15 ? 5 : 1)); }, 90); }, 450);
+    });
+    ['pointerup', 'pointerleave', 'pointercancel'].forEach((ev) => b.addEventListener(ev, parar));
+    b.addEventListener('click', () => { if (tocado) return; poner(v + signo * paso); }); // teclado / lector de pantalla
+    b.addEventListener('contextmenu', (e) => e.preventDefault());
+    return b;
+  };
+  const el = h('div', { class: 'stepper' }, boton('menos', '−', -1), input, boton('más', '+', 1));
   el.get = () => v;
   el.set = (n, emitir = false) => poner(n, emitir);
   return el;

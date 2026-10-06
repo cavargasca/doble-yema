@@ -18,6 +18,9 @@
   --sombra: 0 1px 3px rgba(74, 51, 0, 0.12);
 }
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+/* Sin zoom por doble toque en botones y controles (se puede seguir ampliando con dos dedos). */
+button, a, .btn, .item, .ficha, .step-btn, input, select, label { touch-action: manipulation; }
+.step-btn { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
 html { font-size: 18px; }
 body {
   margin: 0; background: var(--crema); color: var(--texto);
