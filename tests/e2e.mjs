@@ -6,7 +6,8 @@ import { iniciar } from './serve.js';
 
 const API = 'https://fake.test/exec';
 const s = crearSandbox();
-s.ejecutar('setup()'); s.ejecutar("guardarPin_('gerente','1234')"); s.ejecutar("guardarPin_('operario','5678')");
+s.ejecutar('setup()');
+{ const cfg = s.hojas.get('Config'); const f = cfg.data.find((r) => r && r[0] === 'firma_entrega'); if (f) f[1] = 'Carlos Vargas'; } s.ejecutar("guardarPin_('gerente','1234')"); s.ejecutar("guardarPin_('operario','5678')");
 const token = s.llamar({ action: 'login', usuario: 'gerente', pin: '1234' }).token;
 const sembrar = (entity, record) => { const r = s.llamar({ action: 'sync', token, records: [{ entity, record }] }); if (!r.ok || r.results[0].status !== 'ok') throw new Error('semilla ' + entity + ' ' + JSON.stringify(r)); };
 const ahora = Date.now();
@@ -56,6 +57,7 @@ await page.locator('.modal').getByText('Total $30.000').waitFor();
 await page.getByRole('button', { name: 'Sí, guardar' }).click();
 await page.getByText('RECIBO DE CAJA').first().waitFor();
 await page.getByText('Son: Treinta mil pesos').waitFor();
+await page.getByText('Carlos Vargas').waitFor();
 if (process.env.SHOT) await page.screenshot({ path: process.env.SHOT + '/recibo.png', fullPage: true });
 paso('venta guardada y recibo de caja visible');
 // ---- cobro / cliente ----

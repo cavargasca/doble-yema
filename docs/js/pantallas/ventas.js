@@ -114,7 +114,7 @@ function cabeceraRecibo(d, numero) {
     h('div', { class: 'titulo-recibo' }, 'RECIBO DE CAJA'), h('div', { class: 'suave' }, 'N.° ' + (numero || '')));
 }
 
-const firmas = () => h('div', { class: 'firmas' }, h('div', {}, h('div', { class: 'linea' }), 'Entregó'), h('div', {}, h('div', { class: 'linea' }), 'Recibí conforme (nombre y firma)'));
+const firmas = (d) => h('div', { class: 'firmas' }, h('div', {}, h('div', { class: 'firma-nombre' }, d.cfg.firma_entrega || '\u00a0'), h('div', { class: 'linea' }), 'Entregó'), h('div', {}, h('div', { class: 'firma-nombre' }, '\u00a0'), h('div', { class: 'linea' }), 'Recibí conforme (nombre y firma)'));
 const quien = (cl) => cl.nombre + (cl.documento ? ' · NIT/CC ' + cl.documento : '');
 
 export function recibo(d, ventaId, ctx) {
@@ -142,7 +142,7 @@ export function recibo(d, ventaId, ctx) {
       h('div', { style: 'text-align:right' }, 'Valor recibido ' + fmtCOP(pagado)),
       pagado > 0 ? h('div', { class: 'letras' }, 'Son: ' + valorEnLetras(pagado)) : null,
       pendiente > 0 ? h('div', { style: 'text-align:right; font-weight:700' }, 'Saldo pendiente ' + fmtCOP(pendiente)) : h('div', { style: 'text-align:right; font-weight:700; color:var(--verde)' }, 'Pagado completo'),
-      firmas(),
+      firmas(d),
       h('div', { class: 'pie' }, 'Recibo de caja de control interno. No es factura de venta.')),
     h('div', { class: 'no-imprimir' },
       h('div', { style: 'height:12px' }),
@@ -178,7 +178,7 @@ export function reciboPago(d, cobroId, ctx) {
       h('div', { class: 'letras' }, 'Son: ' + valorEnLetras(c.valor)),
       ec.saldo > 0 ? h('div', { style: 'text-align:right; font-weight:700' }, 'Saldo pendiente actual ' + fmtCOP(ec.saldo)) : h('div', { style: 'text-align:right; font-weight:700; color:var(--verde)' }, 'Cuenta al día'),
       c.notas ? h('div', { class: 'suave' }, 'Nota: ' + c.notas) : null,
-      firmas(),
+      firmas(d),
       h('div', { class: 'pie' }, 'Recibo de caja de control interno. No es factura de venta.')),
     h('div', { class: 'no-imprimir' },
       h('div', { style: 'height:12px' }),

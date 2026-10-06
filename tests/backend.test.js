@@ -31,7 +31,7 @@ test('setup crea hojas, 15 lotes y configuración', () => {
   // idempotente: correr setup otra vez no duplica nada
   s.ejecutar('setup()');
   assert.equal(s.hojas.get('Lotes').getLastRow(), 16);
-  assert.equal(s.hojas.get('Config').getLastRow(), 21);
+  assert.equal(s.hojas.get('Config').getLastRow(), 22);
 });
 
 test('login: sin PIN, PIN incorrecto, bloqueo y éxito', () => {
