@@ -1,0 +1,12 @@
+{
+  "name": "doble-yema",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Control interno de producción, ventas, cobros y gastos de Doble Yema.",
+  "scripts": {
+    "test": "node --test \"tests/**/*.test.js\"",
+    "serve": "node tests/serve.js"
+  },
+  "license": "UNLICENSED"
+}

@@ -1,0 +1,9 @@
+node_modules/
+.DS_Store
+Thumbs.db
+*.log
+.clasp.json
+.env
+Cuaderno/
+*.docx
+Notes.txt
