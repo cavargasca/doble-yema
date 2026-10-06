@@ -2,8 +2,8 @@
 // Todo lo que se registra se guarda primero aquí, así funciona sin señal.
 
 const DB_NOMBRE = 'doble-yema';
-const DB_VERSION = 1;
-export const TABLAS = ['Config', 'Lotes', 'Produccion', 'Empaque', 'Sanidad', 'Clientes', 'Precios', 'Ventas', 'VentaItems', 'Cobros', 'Reposiciones', 'Proveedores', 'Gastos'];
+const DB_VERSION = 2;
+export const TABLAS = ['Config', 'Lotes', 'Produccion', 'Empaque', 'Sanidad', 'Clientes', 'Precios', 'Ventas', 'VentaItems', 'Cobros', 'Reposiciones', 'Proveedores', 'Gastos', 'SalidasAves', 'VentasAves'];
 
 let dbPromesa = null;
 

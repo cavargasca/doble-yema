@@ -200,6 +200,27 @@ function bajasHasta(produccion, loteId, fecha) {
   return sum(produccion.filter((p) => activo(p) && p.lote_id === loteId && p.fecha <= fecha), 'bajas');
 }
 
+// Aves que han salido de un lote hasta una fecha: muertas (bajas) + retiradas por enfermedad o recambio.
+export function avesSalidas(d, loteId, hasta = '9999-12-31') {
+  const salidas = sum((d.salidasAves || []).filter((s) => activo(s) && s.lote_id === loteId && s.fecha <= hasta), 'cantidad');
+  return bajasHasta(d.produccion, loteId, hasta) + salidas;
+}
+
+// Inversión en aves y cuánto se ha recuperado vendiendo gallinas de descarte.
+export function inversionAves(d, cfg = {}) {
+  const costo = num(cfg.costo_ave) || 27000;
+  const lotes = d.lotes.filter((l) => l.estado !== 'descartado');
+  const avesComp = sum(lotes, 'aves_iniciales');
+  const ventas = (d.ventasAves || []).filter(activo);
+  const recuperado = sum(ventas, 'total');
+  const invertido = avesComp * costo;
+  return {
+    avesComp, costoAve: costo, invertido, recuperado, vendidas: sum(ventas, 'cantidad'),
+    recuperadoPct: invertido > 0 ? (recuperado / invertido) * 100 : null,
+    avesActuales: sum(lotes, (l) => Math.max(num(l.aves_iniciales) - avesSalidas(d, l.id), 0)),
+  };
+}
+
 // Cruce diario: lo que entra a bodega contra lo que sale clasificado, roto o descartado.
 export function cruceBodega(produccion, empaque, hasta) {
   const prod = produccion.filter((p) => activo(p) && p.fecha <= hasta);
@@ -276,7 +297,7 @@ export function porLote(d, desde, hasta, cfg = {}) {
   return d.lotes.filter((l) => l.estado !== 'descartado').map((lote) => {
     const regs = d.produccion.filter((p) => activo(p) && p.lote_id === lote.id && p.fecha >= desde && p.fecha <= hasta);
     const huevosTotal = sum(regs, (p) => huevosProd(p) + num(p.rotos_galpon));
-    const avesDia = sum(regs, (p) => avesVivas(lote, bajasHasta(d.produccion, lote.id, p.fecha)));
+    const avesDia = sum(regs, (p) => avesVivas(lote, avesSalidas(d, lote.id, p.fecha)));
     const bajas = sum(regs, 'bajas');
     const alimentoKg = sum(regs, 'alimento_kg');
     return {
@@ -305,7 +326,16 @@ export function indicadores(d, desde, hasta, cfg = {}) {
   const gastos = d.gastos.filter((g) => activo(g) && en(g.fecha));
   const gastosOper = gastos.filter((g) => g.naturaleza !== 'retiro' && g.categoria !== CAT_INVERSION);
   const dias = diasEntre(desde, hasta) + 1;
-  const amortizacion = (num(cfg.amortizacion_aves_mensual) * dias) / 30;
+  // El costo de las aves se reparte en el tiempo: o un valor mensual fijo, o (si se indica la vida productiva) costo por ave / meses.
+  let amortMensual = num(cfg.amortizacion_aves_mensual);
+  if (!amortMensual && num(cfg.meses_vida_ave) > 0) {
+    const vivas = sum(d.lotes.filter((l) => l.estado !== 'descartado'), (l) => Math.max(num(l.aves_iniciales) - avesSalidas(d, l.id, hasta), 0));
+    amortMensual = (vivas * (num(cfg.costo_ave) || 27000)) / num(cfg.meses_vida_ave);
+  }
+  const amortizacion = (amortMensual * dias) / 30;
+  const ventasAves = (d.ventasAves || []).filter((v) => activo(v) && en(v.fecha));
+  const ingresoAves = sum(ventasAves, 'total');
+  const avesVendidas = sum(ventasAves, 'cantidad');
   const costoTotal = sum(gastosOper, 'valor_total') + amortizacion;
 
   const prod = d.produccion.filter((p) => activo(p) && en(p.fecha));
@@ -336,7 +366,8 @@ export function indicadores(d, desde, hasta, cfg = {}) {
     precioPromedioCubeta: cubetasVendidas > 0 ? ventasTotal / cubetasVendidas : null,
     gastosTotal: sum(gastos, 'valor_total'), costoTotal, amortizacion, gastosPorCategoria,
     retiros: sum(gastos.filter((g) => g.naturaleza === 'retiro'), 'valor_total'),
-    margen: ventasTotal - costoTotal, margenPct: ventasTotal > 0 ? ((ventasTotal - costoTotal) / ventasTotal) * 100 : null,
+    ingresoAves, avesVendidas,
+    margen: ventasTotal + ingresoAves - costoTotal, margenPct: ventasTotal + ingresoAves > 0 ? ((ventasTotal + ingresoAves - costoTotal) / (ventasTotal + ingresoAves)) * 100 : null,
     costoHuevo, costoCubeta: costoHuevo === null ? null : costoHuevo * HUEVOS_POR_CUBETA,
     huevosTotal, huevosBuenos, cubetasEmpacadas, perdidas,
     perdidasPct: huevosTotal > 0 ? (perdidas / huevosTotal) * 100 : null,

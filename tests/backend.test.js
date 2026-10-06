@@ -21,7 +21,7 @@ const prod = (over = {}) => ({
 test('setup crea hojas, 15 lotes y configuración', () => {
   const s = crearSandbox();
   s.ejecutar('setup()');
-  for (const n of ['Config', 'Lotes', 'Produccion', 'Empaque', 'Sanidad', 'Clientes', 'Precios', 'Ventas', 'VentaItems', 'Cobros', 'Reposiciones', 'Proveedores', 'Gastos', 'Auditoria']) {
+  for (const n of ['Config', 'Lotes', 'Produccion', 'Empaque', 'Sanidad', 'Clientes', 'Precios', 'Ventas', 'VentaItems', 'Cobros', 'Reposiciones', 'Proveedores', 'Gastos', 'SalidasAves', 'VentasAves', 'Auditoria']) {
     assert.ok(s.hojas.get(n), 'falta la hoja ' + n);
   }
   assert.equal(s.hojas.get('Lotes').getLastRow(), 16);
@@ -31,7 +31,7 @@ test('setup crea hojas, 15 lotes y configuración', () => {
   // idempotente: correr setup otra vez no duplica nada
   s.ejecutar('setup()');
   assert.equal(s.hojas.get('Lotes').getLastRow(), 16);
-  assert.equal(s.hojas.get('Config').getLastRow(), 15);
+  assert.equal(s.hojas.get('Config').getLastRow(), 18);
 });
 
 test('login: sin PIN, PIN incorrecto, bloqueo y éxito', () => {
@@ -102,7 +102,7 @@ test('operario no puede escribir ni leer finanzas', () => {
   assert.equal(r.results[0].status, 'error');
   assert.match(r.results[0].error, /permiso/);
   const pull = t.llamar({ action: 'pull', token: t.ope });
-  assert.deepEqual(Object.keys(pull.tablas).sort(), ['Config', 'Empaque', 'Lotes', 'Produccion', 'Sanidad']);
+  assert.deepEqual(Object.keys(pull.tablas).sort(), ['Config', 'Empaque', 'Lotes', 'Produccion', 'SalidasAves', 'Sanidad']);
 });
 
 test('gerente: venta, cobro, anulación con motivo y auditoría', () => {

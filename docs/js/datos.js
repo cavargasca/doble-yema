@@ -6,13 +6,13 @@ import { hoyISO } from './calc.js';
 const CLAVES = {
   Config: 'config', Lotes: 'lotes', Produccion: 'produccion', Empaque: 'empaque', Sanidad: 'sanidad', Clientes: 'clientes',
   Precios: 'precios', Ventas: 'ventas', VentaItems: 'ventaItems', Cobros: 'cobros', Reposiciones: 'reposiciones',
-  Proveedores: 'proveedores', Gastos: 'gastos',
+  Proveedores: 'proveedores', Gastos: 'gastos', SalidasAves: 'salidasAves', VentasAves: 'ventasAves',
 };
 
 export async function cargar() {
   const d = {};
   await Promise.all(Object.entries(CLAVES).map(async ([t, k]) => { d[k] = await S.todos(t); }));
-  const cfg = { nombre_negocio: 'Doble Yema', kg_por_bulto: '40', margen_minimo_pct: '10', umbral_cliente_anterior_dias: '30' };
+  const cfg = { nombre_negocio: 'Doble Yema', kg_por_bulto: '40', margen_minimo_pct: '10', umbral_cliente_anterior_dias: '30', costo_ave: '27000', precio_gallina_descarte: '20000', meses_vida_ave: '0' };
   for (const r of d.config) cfg[r.id] = r.value;
   d.cfg = cfg;
   d.lotes.sort((a, b) => String(a.id).localeCompare(String(b.id)));

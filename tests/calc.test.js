@@ -283,3 +283,22 @@ test('producción: el galpón anota un solo total de huevos y los registros anti
   assert.equal(c.recibidos, 255);
   assert.equal(c.diferencia, 0); // 8 cubetas (240) + 15 sueltos
 });
+
+test('gallinas de descarte: salen del lote, ingresan y entran al margen', () => {
+  const d = {
+    lotes: [{ id: 'l1', nombre: 'Lote 1', aves_iniciales: 200 }], produccion: [{ id: 'p', fecha: '2026-10-01', lote_id: 'l1', bajas: 2 }],
+    empaque: [], ventas: [], ventaItems: [], cobros: [], gastos: [], reposiciones: [],
+    salidasAves: [{ id: 's1', fecha: '2026-10-02', lote_id: 'l1', cantidad: 5, causa: 'enfermedad' }, { id: 's2', fecha: '2026-10-02', lote_id: 'l1', cantidad: 9, anulado: true }],
+    ventasAves: [{ id: 'va1', fecha: '2026-10-02', lote_id: 'l1', cantidad: 5, precio_unit: 20000, total: 100000, medio: 'Efectivo' }],
+  };
+  assert.equal(C.avesSalidas(d, 'l1'), 7);
+  const inv = C.inversionAves(d, { costo_ave: 27000 });
+  assert.equal(inv.invertido, 5400000);
+  assert.equal(inv.recuperado, 100000);
+  assert.equal(inv.avesActuales, 193);
+  const i = C.indicadores(d, '2026-10-01', '2026-10-30', { costo_ave: 27000, meses_vida_ave: 18 });
+  assert.equal(i.ingresoAves, 100000);
+  assert.equal(i.avesVendidas, 5);
+  assert.ok(i.amortizacion > 0);
+  assert.equal(i.margen, 100000 - i.costoTotal);
+});

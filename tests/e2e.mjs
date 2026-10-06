@@ -72,7 +72,24 @@ paso('gasto de alimento guardado');
 // ---- resumen ----
 await page.goto('http://localhost:8099/#/resumen');
 await page.getByText('Dinero por medio de pago').waitFor();
+await page.getByText('Inversión en gallinas').waitFor();
 paso('resumen carga');
+// ---- proveedores con tipo ----
+await page.goto('http://localhost:8099/#/proveedores/nuevo');
+await page.getByPlaceholder('Ej: Purina').fill('Purina');
+await page.locator('select').selectOption({ label: 'Alimento (concentrado)' });
+await page.getByRole('button', { name: 'Guardar' }).click();
+await page.getByText('Alimento (concentrado)').first().waitFor();
+paso('proveedor con tipo guardado');
+// ---- venta de gallinas de descarte ----
+await page.goto('http://localhost:8099/#/gallinas');
+await page.locator('select').selectOption({ index: 1 });
+await page.getByRole('button', { name: 'Guardar' }).click();
+await page.getByRole('button', { name: 'Sí, guardar' }).click();
+await page.getByText('Hola').first().waitFor();
+await page.waitForFunction(() => document.querySelector('.estado-sync')?.textContent.includes('Al día'), null, { timeout: 15000 });
+if (s.hojas.get('VentasAves').getLastRow() !== 2 || s.hojas.get('SalidasAves').getLastRow() !== 2 || s.hojas.get('Proveedores').getLastRow() !== 2) throw new Error('gallinas/proveedor no llegaron al servidor');
+paso('venta de gallinas y proveedor llegan al servidor');
 await page.goto('http://localhost:8099/#/precios/general');
 await page.getByText('Lista general de precios').first().waitFor();
 await page.goto('http://localhost:8099/#/precios-ajuste');
@@ -110,6 +127,13 @@ paso('al volver la señal, se sincroniza solo');
 await page.goto('http://localhost:8099/#/venta');
 await page.getByText('solo para gerencia').waitFor();
 paso('operario bloqueado en pantallas de gerencia');
+
+// cerrar sesión desde el botón 🚪 del encabezado
+await page.goto('http://localhost:8099/#/');
+await page.getByRole('button', { name: 'Cerrar sesión' }).first().click();
+await page.getByRole('button', { name: 'Sí, continuar' }).click();
+await page.getByRole('radio', { name: 'Gerente' }).waitFor();
+paso('cerrar sesión lleva a la pantalla de entrada');
 
 await browser.close(); srv.close();
 if (errores.length) { console.log('\nERRORES EN CONSOLA:\n' + errores.join('\n')); process.exit(1); }

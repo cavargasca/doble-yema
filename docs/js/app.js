@@ -48,8 +48,9 @@ function marco(titulo, contenido, { atras = true } = {}) {
     h('header', { class: 'barra-sup' },
       atras ? h('button', { class: 'atras', type: 'button', 'aria-label': 'Volver', onclick: () => history.back() }, '‹') : null,
       atras ? h('a', { class: 'atras inicio', href: '#/', 'aria-label': 'Ir al inicio' }, '🏠') : null,
-      h('div', { class: 'marca' }, '🥚 ' + titulo), chip),
-    h('main', {}, contenido));
+      h('div', { class: 'marca' }, '🥚 ' + titulo), chip,
+      h('button', { class: 'atras salir', type: 'button', 'aria-label': 'Cerrar sesión', title: 'Cerrar sesión', onclick: cerrarSesionUI }, '🚪')),
+    h('main', {}, contenido, atras ? null : h('div', { style: 'margin-top:24px' }, boton('🚪 Cerrar sesión', cerrarSesionUI, { clase: 'secundario' }))));
   window.scrollTo(0, 0);
   pintarChip();
 }
@@ -108,7 +109,8 @@ async function renderizar() {
     else if (a === 'ventas') { titulo = 'Ventas'; vista = soloGer(() => Ve.listaVentas(d, ctx)); }
     else if (a === 'gasto') { titulo = 'Gasto'; vista = soloGer(() => Ga.formGasto(d, ctx)); }
     else if (a === 'gastos') { titulo = 'Gastos'; vista = soloGer(() => Ga.listaGastos(d, ctx)); }
-    else if (a === 'proveedores') { titulo = 'Proveedores'; vista = soloGer(() => Ga.proveedores(d, ctx)); }
+    else if (a === 'proveedores') { titulo = 'Proveedores'; vista = soloGer(() => (b ? Ga.formProveedor(d, b, ctx) : Ga.proveedores(d, ctx))); }
+    else if (a === 'gallinas') { titulo = 'Gallinas'; vista = soloGer(() => Ga.formGallinas(d, ctx)); }
     else if (a === 'clientes') {
       titulo = 'Clientes';
       if (!b) vista = soloGer(() => Cl.lista(d, q.get('f') || 'todos'));
@@ -145,20 +147,22 @@ function inicioGerente(d) {
       h('a', { class: 'boton-grande', href: '#/mas' }, h('span', { class: 'emoji' }, '⋯'), 'Más')));
 }
 
+async function cerrarSesionUI() {
+  if (!(await confirmar('¿Cerrar sesión en este equipo?'))) return;
+  const r = await API.salir();
+  if (!r.ok) { aviso(`Hay ${r.pendientes} registro(s) sin enviar. Conéctate a internet y espera a que se envíen antes de salir.`); return; }
+  sesion = null; pantallaLogin();
+}
+
 function pantallaMas(d) {
   const enlace = (href, txt) => h('li', {}, h('a', { class: 'item', href }, h('div', { class: 'grande' }, txt)));
   const lista = esGerente() ? [
     enlace('#/ventas', '🧾 Ventas recientes'), enlace('#/gastos', '💸 Gastos recientes'), enlace('#/reposicion', '💔 Reponer huevos rotos'),
-    enlace('#/precios/general', '🏷️ Lista general de precios'), enlace('#/proveedores', '🚚 Proveedores'),
+    enlace('#/precios/general', '🏷️ Lista general de precios'), enlace('#/gallinas', '🐔 Vender gallinas (enfermas o recambio)'), enlace('#/proveedores', '🚚 Proveedores'),
   ] : [];
   return h('div', {}, h('h1', {}, 'Más'), h('ul', { class: 'lista' }, lista),
     tarjeta(h('div', { class: 'suave' }, `Sesión: ${sesion.usuario} · Versión ${VERSION_APP}`), h('div', { style: 'height:10px' }),
-      boton('Salir', async () => {
-        if (!(await confirmar('¿Cerrar sesión en este teléfono?'))) return;
-        const r = await API.salir();
-        if (!r.ok) { aviso(`Hay ${r.pendientes} registro(s) sin enviar. Conéctate a internet y espera a que se envíen antes de salir.`); return; }
-        sesion = null; pantallaLogin();
-      }, { clase: 'secundario' })));
+      boton('🚪 Cerrar sesión', cerrarSesionUI, { clase: 'secundario' })));
 }
 
 function iniciarApp() {

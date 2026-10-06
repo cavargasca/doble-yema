@@ -6,7 +6,7 @@
  * Pasos de instalación: ver docs/INSTALACION.md
  */
 
-const VERSION = '0.1.2';
+const VERSION = '0.1.3';
 const TOKEN_DIAS = 30;
 const MAX_FALLOS = 5;
 const BLOQUEO_SEG = 600;
@@ -70,6 +70,16 @@ const SCHEMA = {
     nums: ['huevos', 'ts'], fechas: ['fecha'], enums: { categoria: CATEGORIAS_HUEVO, tipo: ['entrega', 'devolucion'] },
     read: GER, write: GER, req: ['id', 'fecha', 'cliente_id', 'categoria'],
   },
+  SalidasAves: {
+    cols: ['id', 'fecha', 'lote_id', 'cantidad', 'causa', 'notas', 'usuario', 'ts', 'anulado', 'motivo'],
+    nums: ['cantidad', 'ts'], fechas: ['fecha'], enums: { causa: ['enfermedad', 'recambio'] },
+    read: OP, write: GER, req: ['id', 'fecha', 'lote_id'],
+  },
+  VentasAves: {
+    cols: ['id', 'fecha', 'salida_id', 'lote_id', 'cantidad', 'precio_unit', 'total', 'comprador', 'medio', 'notas', 'usuario', 'ts', 'anulado', 'motivo'],
+    nums: ['cantidad', 'precio_unit', 'total', 'ts'], fechas: ['fecha'], enums: { medio: ['Efectivo', 'Nequi', 'Daviplata', 'Banco'] },
+    read: GER, write: GER, req: ['id', 'fecha', 'lote_id'],
+  },
   Proveedores: {
     cols: ['id', 'nombre', 'telefono', 'tipo', 'notas'], read: GER, write: GER, req: ['id', 'nombre'],
   },
@@ -90,11 +100,14 @@ const CONFIG_INICIAL = [
   ['amortizacion_aves_mensual', '0', 'Costo mensual de las aves repartido en su vida productiva (pesos)'],
   ['umbral_cliente_anterior_dias', '30', 'Días sin comprar para considerar "cliente anterior"'],
   ['margen_minimo_pct', '10', 'Margen mínimo esperado por cubeta (alerta si el precio queda por debajo)'],
+  ['costo_ave', '27000', 'Lo que cuesta cada gallina al comprarla (pesos)'],
+  ['precio_gallina_descarte', '20000', 'Precio habitual al vender una gallina de descarte (pesos)'],
+  ['meses_vida_ave', '0', 'Meses de vida productiva de una gallina. Si pones un número, el costo de las aves se reparte automáticamente (0 = no calcular)'],
   ['saldo_inicial_Efectivo', '0', 'Efectivo en caja el día que empezaste a usar el sistema'],
   ['saldo_inicial_Nequi', '0', 'Saldo de Nequi el día de inicio'],
   ['saldo_inicial_Daviplata', '0', 'Saldo de Daviplata el día de inicio'],
   ['saldo_inicial_Banco', '0', 'Saldo de la cuenta bancaria el día de inicio'],
-  ['categorias_gasto', 'Alimento,Cubetas (empaque),Vitaminas y medicinas,Mano de obra,Servicios,Transporte,Mantenimiento,Aves (inversión),Otros', 'Lista de categorías de gasto, separadas por coma'],
+  ['categorias_gasto', 'Alimento,Piedra cal y suplementos,Cubetas (empaque),Vitaminas y medicinas,Mano de obra,Servicios,Transporte,Mantenimiento,Aves (inversión),Otros', 'Lista de categorías de gasto, separadas por coma'],
   ['unidades', 'bulto,kg,unidad,ml,g,dosis', 'Unidades para gastos'],
 ];
 

@@ -1,6 +1,6 @@
 // Gerencia: tablero de indicadores, alertas, inventarios y dinero por medio.
 import { h, tarjeta, fichas, aviso_caja, barra, dinero, vaciar } from '../ui.js';
-import { hoyISO, addDias, inicioSemana, inicioMes, fmtCOP, fmtNum, fmtPct, fmtFecha, num, activo, CATEGORIAS, indicadores, alertas, inventarioCubetas, stockAlimento, stockCubetasVacias, cartera } from '../calc.js';
+import { hoyISO, addDias, inicioSemana, inicioMes, fmtCOP, fmtNum, fmtPct, fmtFecha, num, activo, CATEGORIAS, indicadores, alertas, inventarioCubetas, stockAlimento, stockCubetasVacias, cartera, inversionAves } from '../calc.js';
 
 const MEDIOS = ['Efectivo', 'Nequi', 'Daviplata', 'Banco'];
 const kpi = (n, v, clase = '') => h('div', { class: 'kpi ' + clase }, h('div', { class: 'valor' }, v), h('div', { class: 'nombre' }, n));
@@ -16,7 +16,8 @@ export function dineroPorMedio(d) {
     const inicial = num(d.cfg['saldo_inicial_' + m]);
     const entra = d.cobros.filter((c) => activo(c) && c.medio === m).reduce((a, c) => a + num(c.valor), 0);
     const sale = d.gastos.filter((g) => activo(g) && g.medio_pago === m).reduce((a, g) => a + num(g.valor_total), 0);
-    return { medio: m, inicial, entra, sale, saldo: inicial + entra - sale };
+    const aves = (d.ventasAves || []).filter((v) => activo(v) && v.medio === m).reduce((a, v) => a + num(v.total), 0);
+    return { medio: m, inicial, entra: entra + aves, sale, saldo: inicial + entra + aves - sale };
   });
 }
 
@@ -36,13 +37,20 @@ export function resumen(d) {
     const al = stockAlimento(d.gastos, d.produccion, d.cfg, hoy);
     const cv = stockCubetasVacias(d.gastos, d.empaque, d.cfg);
     const dinero$ = dineroPorMedio(d);
+    const inA = inversionAves(d, d.cfg);
     cont.append(
       h('div', { class: 'kpis' },
-        kpi('Ventas', fmtCOP(i.ventasTotal)), kpi('Cobrado', fmtCOP(i.cobrado)),
+        kpi('Ventas de huevos', fmtCOP(i.ventasTotal)), kpi('Cobrado', fmtCOP(i.cobrado)),
+        kpi('Venta de gallinas' + (i.avesVendidas ? ` (${fmtNum(i.avesVendidas, 0)})` : ''), fmtCOP(i.ingresoAves)),
         kpi('Gastos del negocio', fmtCOP(i.costoTotal)), kpi('Margen', fmtCOP(i.margen) + (i.margenPct !== null ? ` (${fmtNum(i.margenPct, 0)} %)` : ''), i.margen < 0 ? 'rojo' : 'verde'),
         kpi('Cubetas vendidas', fmtNum(i.cubetasVendidas, 0)), kpi('Precio prom. cubeta', i.precioPromedioCubeta ? fmtCOP(i.precioPromedioCubeta) : '–'),
         kpi('Costo por cubeta', i.costoCubeta ? fmtCOP(i.costoCubeta) : '–'), kpi('Postura', fmtPct(i.posturaPct)),
         kpi('Pérdidas (rotos, descarte)', fmtPct(i.perdidasPct), i.perdidasPct > 5 ? 'rojo' : ''), kpi('Retiros personales', fmtCOP(i.retiros))),
+      h('h2', {}, 'Inversión en gallinas'),
+      tarjeta(h('div', { class: 'kpis', style: 'margin:0' }, kpi('Invertido en aves', fmtCOP(inA.invertido)), kpi('Recuperado vendiendo', fmtCOP(inA.recuperado) + (inA.recuperadoPct !== null ? ` (${fmtNum(inA.recuperadoPct, 0)} %)` : ''), 'verde'),
+        kpi('Gallinas hoy', fmtNum(inA.avesActuales, 0)), kpi('Costo por ave', fmtCOP(inA.costoAve))),
+        h('p', { class: 'suave' }, `Cada gallina costó ${fmtCOP(inA.costoAve)}. Su costo se reparte mes a mes en los gastos (amortización) y lo que recuperas al venderlas entra como ingreso.`),
+        h('a', { href: '#/gallinas', class: 'btn secundario chico' }, 'Vender gallinas')),
       h('h2', {}, 'Por cobrar'),
       tarjeta(h('div', { class: 'kpis', style: 'margin:0' }, kpi('Total por cobrar', fmtCOP(porCobrar)), kpi('Vencido', fmtCOP(vencido), vencido ? 'rojo' : '')),
         h('a', { href: '#/clientes?f=deuda', class: 'btn secundario chico', style: 'margin-top:10px' }, 'Ver quién debe')),
