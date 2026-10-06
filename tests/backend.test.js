@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { crearSandbox } from './gas-sandbox.js';
+import { crearSandbox, sandboxOcupado } from './gas-sandbox.js';
 
 function preparar() {
   const s = crearSandbox();
@@ -192,4 +192,17 @@ test('límite de registros por envío y acción desconocida', () => {
   assert.equal(t.llamar({ action: 'sync', token: t.ope, records: muchos }).code, 'LIMITE');
   assert.equal(t.llamar({ action: 'borrar-todo', token: t.ger }).code, 'ACCION');
   assert.equal(JSON.parse(t.sandbox.doGet().getContent()).ok, true);
+});
+
+test('si el servidor está ocupado responde BUSY (reintentable) y luego guarda sin duplicar', () => {
+  const s = preparar();
+  sandboxOcupado.valor = true;
+  const r1 = s.llamar({ action: 'sync', token: s.ope, records: [prod()] });
+  assert.equal(r1.ok, false);
+  assert.equal(r1.code, 'BUSY');
+  assert.equal(s.hojas.get('Produccion').getLastRow(), 1);
+  sandboxOcupado.valor = false;
+  const r2 = s.llamar({ action: 'sync', token: s.ope, records: [prod()] });
+  assert.equal(r2.results[0].status, 'ok');
+  assert.equal(s.hojas.get('Produccion').getLastRow(), 2);
 });

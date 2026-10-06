@@ -58,6 +58,7 @@ class FakeSheet {
   setFrozenRows() {}
 }
 
+export const sandboxOcupado = { valor: false };
 export function crearSandbox() {
   const hojas = new Map();
   const libro = {
@@ -83,7 +84,7 @@ export function crearSandbox() {
     SpreadsheetApp: { getActiveSpreadsheet: () => libro, getUi: () => { throw new Error('sin interfaz en pruebas'); } },
     PropertiesService: { getScriptProperties: () => ({ getProperty: (k) => (props.has(k) ? props.get(k) : null), setProperty: (k, v) => props.set(k, String(v)) }) },
     CacheService: { getScriptCache: () => ({ get: (k) => (cache.has(k) ? cache.get(k) : null), put: (k, v) => cache.set(k, v), remove: (k) => cache.delete(k) }) },
-    LockService: { getScriptLock: () => ({ waitLock() {}, releaseLock() {} }) },
+    LockService: { getScriptLock: () => ({ waitLock() {}, tryLock() { return !sandboxOcupado.valor; }, releaseLock() {} }) },
     Logger: { log() {} },
     ContentService: {
       MimeType: { JSON: 'json' },

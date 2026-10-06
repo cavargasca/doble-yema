@@ -6,7 +6,7 @@
  * Pasos de instalación: ver docs/INSTALACION.md
  */
 
-const VERSION = '0.1.0';
+const VERSION = '0.1.1';
 const TOKEN_DIAS = 30;
 const MAX_FALLOS = 5;
 const BLOQUEO_SEG = 600;
@@ -250,9 +250,12 @@ function asegurarHoja_(nombre) {
   if (faltantes.length) {
     hoja.getRange(1, actuales.length + 1, 1, faltantes.length).setValues([faltantes]);
   }
-  const todas = actuales.concat(faltantes);
-  hoja.getRange(1, 1, 1, todas.length).setFontWeight('bold').setBackground('#f3e7c3');
-  hoja.setFrozenRows(1);
+  // El formato solo se aplica al crear la hoja o al agregar columnas; hacerlo en cada envío era lento.
+  if (!actuales.length || faltantes.length) {
+    const todas = actuales.concat(faltantes);
+    hoja.getRange(1, 1, 1, todas.length).setFontWeight('bold').setBackground('#f3e7c3');
+    hoja.setFrozenRows(1);
+  }
   return hoja;
 }
 
@@ -430,7 +433,8 @@ function guardar_(auth, item, contexto, auditoria) {
 
 function sync_(auth, lista) {
   const lock = LockService.getScriptLock();
-  lock.waitLock(25000);
+  // Si otro envío tiene el candado, no se muestra un error técnico: el celular reintenta solo.
+  if (!lock.tryLock(20000)) throw errorCodigo_('El servidor está ocupado. Se reintentará solo.', 'BUSY');
   try {
     const contexto = {};
     const auditoria = [];

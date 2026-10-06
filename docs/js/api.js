@@ -119,7 +119,11 @@ export function sincronizar({ completo = false } = {}) {
       estado.enLinea = true;
       return { ok: true };
     } catch (e) {
-      if (e.codigo === 'AUTH') {
+      if (e.codigo === 'BUSY') {
+        // El servidor estaba ocupado con otro envío: no es un error, se reintenta solo.
+        estado.mensaje = '';
+        setTimeout(() => sincronizar(), 8000);
+      } else if (e.codigo === 'AUTH') {
         await S.delMeta('token');
         estado.mensaje = 'Tu sesión venció. Vuelve a entrar con tu PIN (lo registrado no se pierde).';
       } else if (e.codigo === 'RED') estado.enLinea = false;
