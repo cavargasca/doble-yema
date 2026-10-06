@@ -56,7 +56,7 @@ export function formProduccion(d, loteId, ctx) {
   const sueltos = stepper({ min: 0, max: 29 });
   const rotos = stepper({ min: 0, max: 500 });
   const bajas = stepper({ min: 0, max: 200 });
-  const alimento = stepper({ min: 0, max: 500, paso: 1, decimales: 1 });
+  const alimento = stepper({ min: 0, max: 500, paso: 0.5, decimales: 1 });
   const notas = h('input', { class: 'input', type: 'text', placeholder: 'Opcional (ej. llovió, se escapó una gallina)', maxlength: 200 });
   const vivas = avesVivas(lote, bajasDe(d, lote.id));
 
@@ -92,7 +92,7 @@ export function formProduccion(d, loteId, ctx) {
     campo('Huevos sueltos (los que no completan cubeta)', sueltos),
     campo('Huevos rotos en el galpón', rotos),
     campo('Gallinas muertas (bajas)', bajas),
-    campo('Alimento dado (kilos)', alimento, 'Un bulto son 40 kilos.'),
+    campo('Alimento dado (kilos)', alimento, 'Puedes escribir decimales, por ejemplo 8,2. Un bulto son 40 kilos.'),
     campo('Notas', notas),
     boton('Guardar', guardar, { clase: 'verde' }));
 }

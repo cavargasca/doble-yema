@@ -109,6 +109,11 @@ export function stepper({ valor = 0, min = 0, max = 100000, paso = 1, decimales 
     if (emitir && onChange) onChange(v);
   };
   input.addEventListener('focus', () => input.select());
+  // El valor escrito se toma mientras se digita (acepta coma o punto), sin depender de salir del campo.
+  input.addEventListener('input', () => {
+    v = redondear(Math.min(Math.max(aDecimal(input.value), min), max));
+    if (onChange) onChange(v);
+  });
   input.addEventListener('change', () => poner(aDecimal(input.value)));
   const el = h('div', { class: 'stepper' },
     h('button', { type: 'button', class: 'step-btn', 'aria-label': 'menos', onclick: () => poner(v - paso) }, '−'),
