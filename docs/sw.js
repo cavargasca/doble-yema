@@ -1,8 +1,8 @@
 // Service worker: deja la app disponible sin señal. Los datos viven en IndexedDB, no aquí.
-const VERSION = 'dy-0.1.12';
+const VERSION = 'dy-0.2.0';
 const ARCHIVOS = ['./', 'index.html', 'manifest.webmanifest', 'css/app.css', 'icons/icon-192.png', 'icons/icon-512.png', 'icons/apple-touch-icon.png',
   'js/app.js', 'js/api.js', 'js/calc.js', 'js/config.js', 'js/datos.js', 'js/store.js', 'js/ui.js',
-  'js/pantallas/operario.js', 'js/pantallas/ventas.js', 'js/pantallas/gastos.js', 'js/pantallas/clientes.js', 'js/pantallas/resumen.js'];
+  'js/pantallas/operario.js', 'js/pantallas/ventas.js', 'js/pantallas/gastos.js', 'js/pantallas/clientes.js', 'js/pantallas/resumen.js', 'js/pantallas/tandas.js'];
 
 self.addEventListener('install', (e) => {
   e.waitUntil(caches.open(VERSION).then((c) => c.addAll(ARCHIVOS)).then(() => self.skipWaiting()));

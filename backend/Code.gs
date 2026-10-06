@@ -6,7 +6,7 @@
  * Pasos de instalación: ver docs/INSTALACION.md
  */
 
-const VERSION = '0.1.7';
+const VERSION = '0.2.0';
 const TOKEN_DIAS = 30;
 const MAX_FALLOS = 5;
 const BLOQUEO_SEG = 600;
@@ -69,6 +69,11 @@ const SCHEMA = {
     cols: ['id', 'fecha', 'venta_id', 'cliente_id', 'categoria', 'huevos', 'tipo', 'notas', 'usuario', 'ts', 'anulado', 'motivo'],
     nums: ['huevos', 'ts'], fechas: ['fecha'], enums: { categoria: CATEGORIAS_HUEVO, tipo: ['entrega', 'devolucion'] },
     read: GER, write: GER, req: ['id', 'fecha', 'cliente_id', 'categoria'],
+  },
+  Tandas: {
+    cols: ['id', 'lote_id', 'fecha_ingreso', 'aves', 'costo_ave', 'proveedor_id', 'edad_ingreso_sem', 'fecha_cierre', 'estado', 'notas', 'usuario', 'ts', 'anulado', 'motivo'],
+    nums: ['aves', 'costo_ave', 'edad_ingreso_sem', 'ts'], fechas: ['fecha_ingreso', 'fecha_cierre'], enums: { estado: ['activa', 'cerrada'] },
+    read: OP, write: GER, req: ['id', 'lote_id', 'fecha_ingreso'],
   },
   SalidasAves: {
     cols: ['id', 'fecha', 'lote_id', 'cantidad', 'causa', 'notas', 'usuario', 'ts', 'anulado', 'motivo'],

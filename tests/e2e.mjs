@@ -59,7 +59,17 @@ await page.getByText('RECIBO DE CAJA').first().waitFor();
 await page.getByText('Son: Treinta mil pesos').waitFor();
 await page.getByText('Carlos Vargas').waitFor();
 if (process.env.SHOT) await page.screenshot({ path: process.env.SHOT + '/recibo.png', fullPage: true });
-paso('venta guardada y recibo de caja visible');
+{ // al imprimir, el documento no debe ocupar la hoja completa (eso generaba una hoja en blanco al final)
+  await page.waitForTimeout(2500); // espera a que desaparezca el aviso "Venta guardada"
+  await page.setViewportSize({ width: 794, height: 1123 }); await page.emulateMedia({ media: 'print' });
+  const alto = await page.evaluate(() => Math.round(document.body.getBoundingClientRect().height));
+  await page.emulateMedia({ media: 'screen' }); await page.setViewportSize({ width: 390, height: 844 });
+  if (alto >= 1123) throw new Error('en impresión el documento ocupa toda la hoja (' + alto + ' px)');
+  const pdf = await page.pdf({ format: 'A4', margin: { top: '1cm', bottom: '1cm', left: '1cm', right: '1cm' } });
+  const n = (pdf.toString('latin1').match(/\/Type\s*\/Page[^s]/g) || []).length;
+  if (n !== 1) throw new Error('el recibo imprime ' + n + ' hojas');
+}
+paso('venta guardada y recibo de caja visible (imprime en 1 hoja)');
 // ---- cobro / cliente ----
 await page.goto('http://localhost:8099/#/clientes/cl-1');
 await page.getByText('Al día').first().waitFor({ timeout: 3000 }).catch(() => {});
@@ -102,6 +112,17 @@ await page.getByText('Hola').first().waitFor();
 await page.waitForFunction(() => document.querySelector('.estado-sync')?.textContent.includes('Al día'), null, { timeout: 15000 });
 if (s.hojas.get('VentasAves').getLastRow() !== 2 || s.hojas.get('SalidasAves').getLastRow() !== 2 || s.hojas.get('Proveedores').getLastRow() !== 2) throw new Error('gallinas/proveedor no llegaron al servidor');
 paso('venta de gallinas y proveedor llegan al servidor');
+// ---- gallinas nuevas en un lote: cierra la tanda vieja y abre otra ----
+await page.goto('http://localhost:8099/#/cambio-gallinas');
+await page.getByText('Lote 1', { exact: true }).first().click();
+await page.locator('input[type=date]').fill(new Date(Date.now() + 86400000 - 5 * 3600000).toISOString().slice(0, 10));
+await page.getByRole('button', { name: 'Guardar gallinas nuevas' }).click();
+await page.getByRole('button', { name: 'Sí, guardar' }).click();
+await page.getByText('Historial de gallinas').first().waitFor();
+await page.getByText('Cerrada').first().waitFor();
+await page.waitForFunction(() => document.querySelector('.estado-sync')?.textContent.includes('Al día'), null, { timeout: 15000 });
+if (s.hojas.get('Tandas').getLastRow() !== 3) throw new Error('tandas en el servidor: ' + s.hojas.get('Tandas').getLastRow());
+paso('gallinas nuevas: tanda vieja cerrada y nueva creada');
 await page.goto('http://localhost:8099/#/precios/general');
 await page.getByText('Lista general de precios').first().waitFor();
 await page.goto('http://localhost:8099/#/precios-ajuste');
@@ -111,7 +132,7 @@ await page.getByText('Tienda La Esquina').waitFor();
 paso('clientes y precios cargan');
 await page.waitForTimeout(1500);
 const v = s.hojas.get('Ventas'); const g = s.hojas.get('Gastos'); const c = s.hojas.get('Cobros');
-if (v.getLastRow() !== 2 || c.getLastRow() !== 3 || g.getLastRow() !== 2) throw new Error(`filas servidor: ventas ${v.getLastRow()} cobros ${c.getLastRow()} gastos ${g.getLastRow()}`);
+if (v.getLastRow() !== 2 || c.getLastRow() !== 3 || g.getLastRow() !== 3) throw new Error(`filas servidor: ventas ${v.getLastRow()} cobros ${c.getLastRow()} gastos ${g.getLastRow()}`);
 paso('el servidor recibió venta, cobro y gasto');
 
 // ---- operario sin conexión ----

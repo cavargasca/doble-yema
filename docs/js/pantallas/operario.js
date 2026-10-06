@@ -1,6 +1,6 @@
 // Pantallas de campo: producción por lote, bodega y sanidad. Sin precios ni dinero.
 import { h, tarjeta, campo, stepper, fichas, selector, boton, confirmar, aviso, toast, aviso_caja, insignia } from '../ui.js';
-import { hoyISO, addDias, fmtFecha, fmtNum, num, activo, huevosProd, avesVivas, cruceBodega, resumenDia, retirosActivos, CATEGORIAS, COL_CAT } from '../calc.js';
+import { hoyISO, addDias, fmtFecha, fmtNum, num, activo, huevosProd, avesDelLote, tandaEn, edadSemanas, cruceBodega, resumenDia, retirosActivos, CATEGORIAS, COL_CAT } from '../calc.js';
 import { crear } from '../datos.js';
 
 const selFecha = (inicial, onChange) => {
@@ -41,12 +41,20 @@ export function listaLotes(d) {
       const regs = d.produccion.filter((p) => activo(p) && p.lote_id === l.id && p.fecha === hoy);
       const huev = regs.reduce((a, p) => a + huevosProd(p), 0);
       return h('li', {}, h('a', { class: 'item', href: '#/produccion/' + l.id },
-        h('div', {}, h('div', { class: 'grande' }, l.nombre), h('div', { class: 'suave' }, `${fmtNum(avesVivas(l, bajasDe(d, l.id)), 0)} aves`)),
+        h('div', {}, h('div', { class: 'grande' }, l.nombre), h('div', { class: 'suave' }, infoLote(d, l))),
         h('div', { class: 'derecha' }, regs.length ? h('span', { class: 'estado-ok' }, `✓ ${fmtNum(huev, 0)} huevos`) : h('span', { class: 'estado-falta' }, 'Falta'))));
     })));
 }
 
-const bajasDe = (d, loteId) => d.produccion.filter((p) => activo(p) && p.lote_id === loteId).reduce((a, p) => a + num(p.bajas), 0);
+// "200 aves · 34 semanas" o "Vacío" según la tanda que tenga el lote hoy.
+function infoLote(d, l) {
+  const hoy = hoyISO();
+  const t = tandaEn(d, l.id, hoy);
+  const vivas = avesDelLote(d, l, hoy);
+  if (!t || vivas === 0) return 'Vacío';
+  const sem = edadSemanas(t, hoy);
+  return `${fmtNum(vivas, 0)} aves` + (sem !== null ? ` · ${sem} semanas` : '');
+}
 
 export function formProduccion(d, loteId, ctx) {
   const lote = d.lotes.find((l) => l.id === loteId);
@@ -57,7 +65,7 @@ export function formProduccion(d, loteId, ctx) {
   const bajas = stepper({ min: 0, max: 200 });
   const alimento = stepper({ min: 0, max: 500, paso: 0.5, decimales: 1 });
   const notas = h('input', { class: 'input', type: 'text', placeholder: 'Opcional (ej. llovió, se escapó una gallina)', maxlength: 200 });
-  const vivas = avesVivas(lote, bajasDe(d, lote.id));
+  const vivas = avesDelLote(d, lote);
 
   const guardar = async () => {
     const n = recogidos.get(); const r = rotos.get(); const b = bajas.get(); const a = alimento.get();
@@ -85,7 +93,8 @@ export function formProduccion(d, loteId, ctx) {
 
   return h('div', {},
     h('h1', {}, lote.nombre),
-    h('p', { class: 'suave' }, `${fmtNum(vivas, 0)} aves vivas`),
+    h('p', { class: 'suave' }, infoLote(d, lote)),
+    vivas === 0 ? aviso_caja('Este lote figura vacío. Si ya entraron gallinas nuevas, avisa al gerente para registrarlas.', 'amarillo') : null,
     campo('¿Qué día?', selFecha(fecha, (v) => { fecha = v; })),
     campo('Huevos recogidos', recogidos, 'El total del lote, sin dividir en cubetas. Cuenta solo los huevos buenos; los rotos van en el siguiente campo.'),
     campo('Huevos rotos en el galpón', rotos),

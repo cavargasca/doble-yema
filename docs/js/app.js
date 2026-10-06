@@ -8,6 +8,7 @@ import * as Ve from './pantallas/ventas.js';
 import * as Ga from './pantallas/gastos.js';
 import * as Cl from './pantallas/clientes.js';
 import * as Re from './pantallas/resumen.js';
+import * as Ta from './pantallas/tandas.js';
 import { hoyISO, fmtFecha } from './calc.js';
 
 const raiz = document.getElementById('app');
@@ -113,6 +114,8 @@ async function renderizar({ conservar = false } = {}) {
     else if (a === 'gasto') { titulo = 'Gasto'; vista = soloGer(() => Ga.formGasto(d, ctx)); }
     else if (a === 'gastos') { titulo = 'Gastos'; vista = soloGer(() => Ga.listaGastos(d, ctx)); }
     else if (a === 'proveedores') { titulo = 'Proveedores'; vista = soloGer(() => (b ? Ga.formProveedor(d, b, ctx) : Ga.proveedores(d, ctx))); }
+    else if (a === 'cambio-gallinas') { titulo = 'Gallinas nuevas'; vista = soloGer(() => (b ? Ta.formCambio(d, b, ctx) : Ta.elegirLote(d))); }
+    else if (a === 'tandas') { titulo = 'Historial de gallinas'; vista = soloGer(() => (b ? Ta.formEditarTanda(d, b, ctx) : Ta.historial(d))); }
     else if (a === 'gallinas') { titulo = 'Gallinas'; vista = soloGer(() => Ga.formGallinas(d, ctx)); }
     else if (a === 'clientes') {
       titulo = 'Clientes';
@@ -162,7 +165,7 @@ function pantallaMas(d) {
   const enlace = (href, txt) => h('li', {}, h('a', { class: 'item', href }, h('div', { class: 'grande' }, txt)));
   const lista = esGerente() ? [
     enlace('#/ventas', '🧾 Ventas recientes'), enlace('#/gastos', '💸 Gastos recientes'), enlace('#/reposicion', '💔 Reponer huevos rotos'),
-    enlace('#/precios/general', '🏷️ Lista general de precios'), enlace('#/gallinas', '🐔 Vender gallinas (enfermas o recambio)'), enlace('#/proveedores', '🚚 Proveedores'),
+    enlace('#/precios/general', '🏷️ Lista general de precios'), enlace('#/gallinas', '🐔 Vender gallinas (enfermas o recambio)'), enlace('#/cambio-gallinas', '🆕 Entran gallinas nuevas a un lote'), enlace('#/tandas', '📚 Historial de gallinas por lote'), enlace('#/proveedores', '🚚 Proveedores'),
   ] : [];
   return h('div', {}, h('h1', {}, 'Más'), h('ul', { class: 'lista' }, lista),
     tarjeta(h('div', { class: 'suave' }, `Sesión: ${sesion.usuario} · Versión ${VERSION_APP}`), [API.estado.diagLogin, API.estado.diag].filter(Boolean).map((x) => h('div', { class: 'suave' }, `${x.accion}: ${(x.total / 1000).toFixed(1)} s en total${x.servidor !== undefined ? ' (servidor ' + (x.servidor / 1000).toFixed(1) + ' s)' : ''}`)), h('div', { style: 'height:10px' }),

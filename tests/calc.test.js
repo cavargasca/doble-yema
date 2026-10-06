@@ -291,7 +291,7 @@ test('gallinas de descarte: salen del lote, ingresan y entran al margen', () => 
     salidasAves: [{ id: 's1', fecha: '2026-10-02', lote_id: 'l1', cantidad: 5, causa: 'enfermedad' }, { id: 's2', fecha: '2026-10-02', lote_id: 'l1', cantidad: 9, anulado: true }],
     ventasAves: [{ id: 'va1', fecha: '2026-10-02', lote_id: 'l1', cantidad: 5, precio_unit: 20000, total: 100000, medio: 'Efectivo' }],
   };
-  assert.equal(C.avesSalidas(d, 'l1'), 7);
+  assert.equal(C.salidasTanda(d, C.tandasDe(d, 'l1')[0]), 7);
   const inv = C.inversionAves(d, { costo_ave: 27000 });
   assert.equal(inv.invertido, 5400000);
   assert.equal(inv.recuperado, 100000);
@@ -314,4 +314,45 @@ test('valorEnLetras', () => {
   assert.equal(C.valorEnLetras(100), 'Cien pesos');
   assert.equal(C.valorEnLetras(1), 'Un peso'); assert.equal(C.valorEnLetras(31), 'Treinta y un pesos'); assert.equal(C.valorEnLetras(21), 'Veintiún pesos');
   assert.equal(C.valorEnLetras(21000), 'Veintiún mil pesos');
+});
+
+test('tandas: lote fijo, historial por tanda y cierre al cambiar las gallinas', () => {
+  const d = {
+    lotes: [{ id: 'l1', nombre: 'Lote 1', aves_iniciales: 200, fecha_ingreso: '2026-01-05' }],
+    tandas: [
+      { id: 't1', lote_id: 'l1', fecha_ingreso: '2026-01-05', aves: 200, costo_ave: 27000, edad_ingreso_sem: 18, fecha_cierre: '2026-09-30', estado: 'cerrada' },
+      { id: 't2', lote_id: 'l1', fecha_ingreso: '2026-10-05', aves: 200, costo_ave: 30000, edad_ingreso_sem: 18, fecha_cierre: '', estado: 'activa' },
+    ],
+    produccion: [
+      { id: 'p1', fecha: '2026-03-01', lote_id: 'l1', huevos: 180, bajas: 2, alimento_kg: 22 },
+      { id: 'p2', fecha: '2026-10-10', lote_id: 'l1', huevos: 100, bajas: 1, alimento_kg: 20 },
+    ],
+    salidasAves: [{ id: 's1', fecha: '2026-09-20', lote_id: 'l1', cantidad: 150, causa: 'recambio' }],
+    ventasAves: [{ id: 'v1', fecha: '2026-09-20', lote_id: 'l1', cantidad: 150, precio_unit: 20000, total: 3000000 }],
+    empaque: [], ventas: [], ventaItems: [], cobros: [], gastos: [], reposiciones: [],
+  };
+  const lote = d.lotes[0];
+  // el lote es el mismo, pero las aves vivas dependen de la tanda de cada fecha
+  assert.equal(C.avesDelLote(d, lote, '2026-03-01'), 198);
+  assert.equal(C.avesDelLote(d, lote, '2026-09-25'), 48);
+  assert.equal(C.avesDelLote(d, lote, '2026-10-02'), 0); // vacío entre tandas
+  assert.equal(C.avesDelLote(d, lote, '2026-10-10'), 199);
+  assert.equal(C.edadSemanas(d.tandas[1], '2026-11-02'), 22);
+  const h = C.historialTandas(d, { costo_ave: 27000 }, '2026-10-20');
+  assert.equal(h.length, 2);
+  const nueva = h[0]; const vieja = h[1];
+  assert.equal(nueva.tanda.id, 't2'); assert.equal(nueva.vivas, 199); assert.equal(nueva.invertido, 6000000);
+  assert.equal(vieja.cerrada, true); assert.equal(vieja.bajas, 2); assert.equal(vieja.huevos, 180);
+  assert.equal(vieja.vendidas, 150); assert.equal(vieja.recuperado, 3000000); assert.equal(vieja.invertido, 5400000); assert.equal(vieja.neto, 2400000);
+  assert.ok(Math.abs(vieja.costoAveHuevo - 2400000 / 180) < 1e-9);
+  // la inversión total suma las dos tandas
+  const inv = C.inversionAves(d, { costo_ave: 27000 }, '2026-10-20');
+  assert.equal(inv.invertido, 5400000 + 6000000);
+  assert.equal(inv.avesActuales, 199);
+});
+
+test('lote sin tandas usa aves_iniciales como tanda virtual', () => {
+  const d = { lotes: [{ id: 'l1', nombre: 'Lote 1', aves_iniciales: 200, fecha_ingreso: '' }], produccion: [{ id: 'p', fecha: '2026-10-01', lote_id: 'l1', bajas: 3 }], salidasAves: [], ventasAves: [] };
+  assert.equal(C.avesDelLote(d, d.lotes[0], '2026-10-05'), 197);
+  assert.equal(C.tandasDe(d, 'l1')[0].virtual, true);
 });

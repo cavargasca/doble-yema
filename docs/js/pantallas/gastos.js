@@ -1,6 +1,6 @@
 // Gerencia: gastos y proveedores.
 import { h, tarjeta, campo, stepper, dinero, fichas, selector, boton, confirmar, aviso, toast, aviso_caja, pedirTexto, comprimirImagen, vaciar } from '../ui.js';
-import { hoyISO, fmtCOP, fmtNum, fmtFechaCorta, num, activo, CAT_ALIMENTO, CAT_CUBETAS, precioKgAlimento, avesSalidas, inversionAves } from '../calc.js';
+import { hoyISO, fmtCOP, fmtNum, fmtFechaCorta, num, activo, CAT_ALIMENTO, CAT_CUBETAS, precioKgAlimento, avesDelLote, inversionAves } from '../calc.js';
 import { crear, guardarCompleto, anular, lista } from '../datos.js';
 import { nuevoId } from '../store.js';
 
@@ -127,7 +127,7 @@ export function formProveedor(d, id, ctx) {
 // Venta (o salida) de gallinas enfermas o de recambio: recupera parte del costo de las aves.
 export function formGallinas(d, ctx) {
   const lotes = d.lotes.filter((l) => l.estado !== 'descartado');
-  const vivasDe = (id) => { const l = lotes.find((x) => x.id === id); return l ? Math.max(num(l.aves_iniciales) - avesSalidas(d, id), 0) : 0; };
+  const vivasDe = (id) => { const l = lotes.find((x) => x.id === id); return l ? avesDelLote(d, l) : 0; };
   const precioBase = num(d.cfg.precio_gallina_descarte) || 20000;
   const costoAve = num(d.cfg.costo_ave) || 27000;
   let causa = 'enfermedad'; let medio = 'Efectivo';

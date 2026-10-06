@@ -6,7 +6,7 @@ import { hoyISO } from './calc.js';
 const CLAVES = {
   Config: 'config', Lotes: 'lotes', Produccion: 'produccion', Empaque: 'empaque', Sanidad: 'sanidad', Clientes: 'clientes',
   Precios: 'precios', Ventas: 'ventas', VentaItems: 'ventaItems', Cobros: 'cobros', Reposiciones: 'reposiciones',
-  Proveedores: 'proveedores', Gastos: 'gastos', SalidasAves: 'salidasAves', VentasAves: 'ventasAves',
+  Proveedores: 'proveedores', Gastos: 'gastos', SalidasAves: 'salidasAves', VentasAves: 'ventasAves', Tandas: 'tandas',
 };
 
 export async function cargar() {

@@ -21,7 +21,7 @@ const prod = (over = {}) => ({
 test('setup crea hojas, 15 lotes y configuración', () => {
   const s = crearSandbox();
   s.ejecutar('setup()');
-  for (const n of ['Config', 'Lotes', 'Produccion', 'Empaque', 'Sanidad', 'Clientes', 'Precios', 'Ventas', 'VentaItems', 'Cobros', 'Reposiciones', 'Proveedores', 'Gastos', 'SalidasAves', 'VentasAves', 'Auditoria']) {
+  for (const n of ['Config', 'Lotes', 'Produccion', 'Empaque', 'Sanidad', 'Clientes', 'Precios', 'Ventas', 'VentaItems', 'Cobros', 'Reposiciones', 'Proveedores', 'Gastos', 'SalidasAves', 'VentasAves', 'Tandas', 'Auditoria']) {
     assert.ok(s.hojas.get(n), 'falta la hoja ' + n);
   }
   assert.equal(s.hojas.get('Lotes').getLastRow(), 16);
@@ -102,7 +102,7 @@ test('operario no puede escribir ni leer finanzas', () => {
   assert.equal(r.results[0].status, 'error');
   assert.match(r.results[0].error, /permiso/);
   const pull = t.llamar({ action: 'pull', token: t.ope });
-  assert.deepEqual(Object.keys(pull.tablas).sort(), ['Config', 'Empaque', 'Lotes', 'Produccion', 'SalidasAves', 'Sanidad']);
+  assert.deepEqual(Object.keys(pull.tablas).sort(), ['Config', 'Empaque', 'Lotes', 'Produccion', 'SalidasAves', 'Sanidad', 'Tandas']);
 });
 
 test('gerente: venta, cobro, anulación con motivo y auditoría', () => {
@@ -234,4 +234,21 @@ test('pull incremental: sin cambios responde vacío y rápido; con cambios devue
   const p2 = t.llamar({ action: 'pull', token: t.ger, since: p0.server_time });
   assert.ok(!p2.sin_cambios);
   assert.equal(p2.tablas.Clientes.length, 1);
+});
+
+test('tandas: el gerente cierra una y crea otra; el operario las lee pero no las escribe', () => {
+  const t = preparar();
+  const recs = [
+    { entity: 'Tandas', record: { id: 'ta-0001', lote_id: 'lote-01', fecha_ingreso: '2026-01-05', aves: 200, costo_ave: 27000, edad_ingreso_sem: 18, estado: 'activa', ts: 1 } },
+  ];
+  assert.equal(t.llamar({ action: 'sync', token: t.ger, records: recs }).results[0].status, 'ok');
+  const cierre = { entity: 'Tandas', record: { id: 'ta-0001', lote_id: 'lote-01', fecha_ingreso: '2026-01-05', aves: 200, costo_ave: 27000, edad_ingreso_sem: 18, fecha_cierre: '2026-10-01', estado: 'cerrada', ts: 2 } };
+  const nueva = { entity: 'Tandas', record: { id: 'ta-0002', lote_id: 'lote-01', fecha_ingreso: '2026-10-05', aves: 200, costo_ave: 28000, edad_ingreso_sem: 18, estado: 'activa', ts: 3 } };
+  const r = t.llamar({ action: 'sync', token: t.ger, records: [cierre, nueva] });
+  assert.deepEqual(r.results.map((x) => x.status), ['ok', 'ok']);
+  const ope = t.llamar({ action: 'pull', token: t.ope });
+  assert.equal(ope.tablas.Tandas.length, 2);
+  assert.equal(ope.tablas.Tandas.find((x) => x.id === 'ta-0001').estado, 'cerrada');
+  const x = t.llamar({ action: 'sync', token: t.ope, records: [{ entity: 'Tandas', record: { id: 'ta-0003', lote_id: 'lote-02', fecha_ingreso: '2026-10-05', aves: 5 } }] });
+  assert.equal(x.results[0].status, 'error');
 });

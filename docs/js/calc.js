@@ -224,33 +224,97 @@ export function textoReciboPago(negocio, cliente, cobro, saldo) {
 }
 
 // ---------- producción y bodega ----------
-export function avesVivas(lote, bajasHasta) {
-  return Math.max(num(lote.aves_iniciales) - bajasHasta, 0);
+// Un "lote" es el corral fijo (1 al 15). Una "tanda" son las gallinas que entran a un lote en una fecha;
+// cuando se cambian las gallinas, la tanda vieja se cierra (queda en el historial) y empieza otra.
+// Si un lote aún no tiene tandas registradas, sus aves_iniciales / fecha_ingreso cuentan como una tanda "virtual".
+const FECHA_MIN = '0000-01-01';
+const FECHA_MAX = '9999-12-31';
+
+export function tandasDe(d, loteId) {
+  const reales = (d.tandas || []).filter((t) => activo(t) && t.lote_id === loteId);
+  if (reales.length) return reales.slice().sort((a, b) => String(a.fecha_ingreso).localeCompare(String(b.fecha_ingreso)) || (num(a.ts) - num(b.ts)));
+  const l = d.lotes.find((x) => x.id === loteId);
+  if (!l || !num(l.aves_iniciales)) return [];
+  return [{ id: 'virtual-' + loteId, virtual: true, lote_id: loteId, fecha_ingreso: l.fecha_ingreso || FECHA_MIN, aves: num(l.aves_iniciales), costo_ave: '', edad_ingreso_sem: '', fecha_cierre: '', estado: 'activa' }];
 }
 
-function bajasHasta(produccion, loteId, fecha) {
-  return sum(produccion.filter((p) => activo(p) && p.lote_id === loteId && p.fecha <= fecha), 'bajas');
+// La tanda que estaba en el lote en una fecha (null si el lote estaba vacío).
+export function tandaEn(d, loteId, fecha) {
+  let r = null;
+  for (const t of tandasDe(d, loteId)) if (t.fecha_ingreso <= fecha && (!t.fecha_cierre || t.fecha_cierre >= fecha)) r = t;
+  return r;
 }
 
-// Aves que han salido de un lote hasta una fecha: muertas (bajas) + retiradas por enfermedad o recambio.
-export function avesSalidas(d, loteId, hasta = '9999-12-31') {
-  const salidas = sum((d.salidasAves || []).filter((s) => activo(s) && s.lote_id === loteId && s.fecha <= hasta), 'cantidad');
-  return bajasHasta(d.produccion, loteId, hasta) + salidas;
+const enTanda = (t, f, hasta = FECHA_MAX) => f >= t.fecha_ingreso && f <= hasta && (!t.fecha_cierre || f <= t.fecha_cierre);
+
+// Aves que han salido de una tanda hasta una fecha: muertas (bajas) + retiradas por enfermedad o recambio.
+export function salidasTanda(d, t, hasta = FECHA_MAX) {
+  const bajas = sum(d.produccion.filter((p) => activo(p) && p.lote_id === t.lote_id && enTanda(t, p.fecha, hasta)), 'bajas');
+  const salidas = sum((d.salidasAves || []).filter((s) => activo(s) && s.lote_id === t.lote_id && enTanda(t, s.fecha, hasta)), 'cantidad');
+  return bajas + salidas;
 }
 
-// Inversión en aves y cuánto se ha recuperado vendiendo gallinas de descarte.
-export function inversionAves(d, cfg = {}) {
-  const costo = num(cfg.costo_ave) || 27000;
+export function vivasTanda(d, t, hasta = FECHA_MAX) {
+  return Math.max(num(t.aves) - salidasTanda(d, t, hasta), 0);
+}
+
+// Gallinas que tiene un lote en una fecha (0 si está vacío).
+export function avesDelLote(d, lote, fecha = hoyISO()) {
+  const t = tandaEn(d, lote.id, fecha);
+  return t ? vivasTanda(d, t, fecha) : 0;
+}
+
+export function edadSemanas(t, hoy = hoyISO()) {
+  if (!t || t.edad_ingreso_sem === '' || t.edad_ingreso_sem === undefined || t.edad_ingreso_sem === null) return null;
+  return num(t.edad_ingreso_sem) + Math.floor(diasEntre(t.fecha_ingreso, hoy) / 7);
+}
+
+// Inversión en aves (todas las tandas) y cuánto se ha recuperado vendiendo gallinas de descarte.
+export function inversionAves(d, cfg = {}, hoy = hoyISO()) {
+  const costoBase = num(cfg.costo_ave) || 27000;
   const lotes = d.lotes.filter((l) => l.estado !== 'descartado');
-  const avesComp = sum(lotes, 'aves_iniciales');
+  const tandas = lotes.flatMap((l) => tandasDe(d, l.id));
+  const avesComp = sum(tandas, 'aves');
+  const invertido = sum(tandas, (t) => num(t.aves) * (num(t.costo_ave) || costoBase));
   const ventas = (d.ventasAves || []).filter(activo);
   const recuperado = sum(ventas, 'total');
-  const invertido = avesComp * costo;
   return {
-    avesComp, costoAve: costo, invertido, recuperado, vendidas: sum(ventas, 'cantidad'),
+    avesComp, costoAve: costoBase, invertido, recuperado, vendidas: sum(ventas, 'cantidad'),
     recuperadoPct: invertido > 0 ? (recuperado / invertido) * 100 : null,
-    avesActuales: sum(lotes, (l) => Math.max(num(l.aves_iniciales) - avesSalidas(d, l.id), 0)),
+    avesActuales: sum(lotes, (l) => avesDelLote(d, l, hoy)),
   };
+}
+
+// Resultado de cada tanda: producción, mortalidad, alimento y cuánto del costo de las aves se ha recuperado.
+export function historialTandas(d, cfg = {}, hoy = hoyISO()) {
+  const costoBase = num(cfg.costo_ave) || 27000;
+  const salida = [];
+  for (const lote of d.lotes.filter((l) => l.estado !== 'descartado')) {
+    for (const t of tandasDe(d, lote.id)) {
+      const regs = d.produccion.filter((p) => activo(p) && p.lote_id === lote.id && enTanda(t, p.fecha));
+      const huevos = sum(regs, (p) => huevosProd(p) + num(p.rotos_galpon));
+      const avesDia = sum(regs, (p) => vivasTanda(d, t, p.fecha));
+      const alimentoKg = sum(regs, 'alimento_kg');
+      const bajas = sum(regs, 'bajas');
+      const ventas = (d.ventasAves || []).filter((v) => activo(v) && v.lote_id === lote.id && enTanda(t, v.fecha));
+      const recuperado = sum(ventas, 'total');
+      const invertido = num(t.aves) * (num(t.costo_ave) || costoBase);
+      const neto = invertido - recuperado;
+      const cerrada = !!t.fecha_cierre;
+      salida.push({
+        tanda: t, lote, cerrada, vacia: !cerrada && vivasTanda(d, t) === 0,
+        edadSem: edadSemanas(t, cerrada ? t.fecha_cierre : hoy), aves: num(t.aves), vivas: cerrada ? 0 : vivasTanda(d, t),
+        bajas, mortalidadPct: num(t.aves) > 0 ? (bajas / num(t.aves)) * 100 : null,
+        huevos, docenas: huevos / 12, cubetas: huevos / HUEVOS_POR_CUBETA, alimentoKg,
+        postura: avesDia > 0 ? (huevos / avesDia) * 100 : null,
+        gAveDia: avesDia > 0 ? (alimentoKg * 1000) / avesDia : null,
+        vendidas: sum(ventas, 'cantidad'), recuperado, invertido, neto,
+        recuperadoPct: invertido > 0 ? (recuperado / invertido) * 100 : null,
+        costoAveHuevo: huevos > 0 ? neto / huevos : null,
+      });
+    }
+  }
+  return salida.sort((a, b) => String(b.tanda.fecha_ingreso).localeCompare(String(a.tanda.fecha_ingreso)) || a.lote.id.localeCompare(b.lote.id));
 }
 
 // Cruce diario: lo que entra a bodega contra lo que sale clasificado, roto o descartado.
@@ -329,13 +393,15 @@ export function porLote(d, desde, hasta, cfg = {}) {
   return d.lotes.filter((l) => l.estado !== 'descartado').map((lote) => {
     const regs = d.produccion.filter((p) => activo(p) && p.lote_id === lote.id && p.fecha >= desde && p.fecha <= hasta);
     const huevosTotal = sum(regs, (p) => huevosProd(p) + num(p.rotos_galpon));
-    const avesDia = sum(regs, (p) => avesVivas(lote, avesSalidas(d, lote.id, p.fecha)));
+    const avesDia = sum(regs, (p) => avesDelLote(d, lote, p.fecha));
+    const tandaPer = tandaEn(d, lote.id, hasta) || tandasDe(d, lote.id).slice(-1)[0];
+    const avesTanda = tandaPer ? num(tandaPer.aves) : 0;
     const bajas = sum(regs, 'bajas');
     const alimentoKg = sum(regs, 'alimento_kg');
     return {
       lote, dias: regs.length, huevos: huevosTotal, bajas,
       postura: avesDia > 0 ? (huevosTotal / avesDia) * 100 : null,
-      mortalidadPct: num(lote.aves_iniciales) > 0 ? (bajas / num(lote.aves_iniciales)) * 100 : null,
+      mortalidadPct: avesTanda > 0 ? (bajas / avesTanda) * 100 : null,
       alimentoKg,
       gAveDia: avesDia > 0 ? (alimentoKg * 1000) / avesDia : null,
       costoAlimentoHuevo: huevosTotal > 0 && kgPrecio ? (alimentoKg * kgPrecio) / huevosTotal : null,
@@ -361,8 +427,11 @@ export function indicadores(d, desde, hasta, cfg = {}) {
   // El costo de las aves se reparte en el tiempo: o un valor mensual fijo, o (si se indica la vida productiva) costo por ave / meses.
   let amortMensual = num(cfg.amortizacion_aves_mensual);
   if (!amortMensual && num(cfg.meses_vida_ave) > 0) {
-    const vivas = sum(d.lotes.filter((l) => l.estado !== 'descartado'), (l) => Math.max(num(l.aves_iniciales) - avesSalidas(d, l.id, hasta), 0));
-    amortMensual = (vivas * (num(cfg.costo_ave) || 27000)) / num(cfg.meses_vida_ave);
+    const costoMes = sum(d.lotes.filter((l) => l.estado !== 'descartado'), (l) => {
+      const t = tandaEn(d, l.id, hasta);
+      return t ? vivasTanda(d, t, hasta) * (num(t.costo_ave) || num(cfg.costo_ave) || 27000) : 0;
+    });
+    amortMensual = costoMes / num(cfg.meses_vida_ave);
   }
   const amortizacion = (amortMensual * dias) / 30;
   const ventasAves = (d.ventasAves || []).filter((v) => activo(v) && en(v.fecha));

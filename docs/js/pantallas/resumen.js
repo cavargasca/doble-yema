@@ -52,7 +52,7 @@ export function resumen(d) {
       tarjeta(h('div', { class: 'kpis', style: 'margin:0' }, kpi('Invertido en aves', fmtCOP(inA.invertido)), kpi('Recuperado vendiendo', fmtCOP(inA.recuperado) + (inA.recuperadoPct !== null ? ` (${fmtNum(inA.recuperadoPct, 0)} %)` : ''), 'verde'),
         kpi('Gallinas hoy', fmtNum(inA.avesActuales, 0)), kpi('Costo por ave', fmtCOP(inA.costoAve))),
         h('p', { class: 'suave' }, `Cada gallina costó ${fmtCOP(inA.costoAve)}. Su costo se reparte mes a mes en los gastos (amortización) y lo que recuperas al venderlas entra como ingreso.`),
-        h('a', { href: '#/gallinas', class: 'btn secundario chico' }, 'Vender gallinas')),
+        h('div', { class: 'fila-botones' }, h('a', { href: '#/gallinas', class: 'btn secundario chico' }, 'Vender gallinas'), h('a', { href: '#/tandas', class: 'btn secundario chico' }, 'Historial por lote'))),
       h('h2', {}, 'Por cobrar'),
       tarjeta(h('div', { class: 'kpis', style: 'margin:0' }, kpi('Total por cobrar', fmtCOP(porCobrar)), kpi('Vencido', fmtCOP(vencido), vencido ? 'rojo' : '')),
         h('a', { href: '#/clientes?f=deuda', class: 'btn secundario chico', style: 'margin-top:10px' }, 'Ver quién debe')),

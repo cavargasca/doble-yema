@@ -174,9 +174,12 @@ table.tabla th { font-size: 0.78rem; color: var(--suave); text-transform: upperc
 .recibo .pie { font-size: 0.8rem; color: var(--suave); text-align: center; margin-top: 14px; border-top: 1px dashed var(--linea); padding-top: 8px; }
 .recibo .total { font-size: 1.3rem; font-weight: 900; text-align: right; margin-top: 8px; }
 
+@page { margin: 12mm; }
 @media print {
   .barra-sup, .no-imprimir, .toast { display: none !important; }
-  body { background: #fff; }
+  /* La altura mínima de pantalla (100vh) hacía el documento exactamente tan alto como la hoja y por redondeo salía una hoja en blanco. */
+  html, body { height: auto !important; min-height: 0 !important; background: #fff; margin: 0; }
+  .recibo { break-inside: avoid; page-break-inside: avoid; }
   main { max-width: none; padding: 0; }
   .recibo { box-shadow: none; }
 }
