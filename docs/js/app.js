@@ -104,7 +104,7 @@ async function renderizar() {
     else if (a === 'venta') { titulo = 'Venta'; vista = soloGer(() => Ve.formVenta(d, b, ctx)); }
     else if (a === 'recibo') { titulo = 'Comprobante'; vista = soloGer(() => Ve.recibo(d, b, ctx)); }
     else if (a === 'cobro') { titulo = 'Pago'; vista = soloGer(() => Ve.formCobro(d, b, ctx)); }
-    else if (a === 'reposicion') { titulo = 'Rotos'; vista = soloGer(() => Ve.formReposicion(d, ctx)); }
+    else if (a === 'reposicion') { titulo = 'Reponer rotos'; vista = soloGer(() => Ve.formReposicion(d, ctx)); }
     else if (a === 'ventas') { titulo = 'Ventas'; vista = soloGer(() => Ve.listaVentas(d, ctx)); }
     else if (a === 'gasto') { titulo = 'Gasto'; vista = soloGer(() => Ga.formGasto(d, ctx)); }
     else if (a === 'gastos') { titulo = 'Gastos'; vista = soloGer(() => Ga.listaGastos(d, ctx)); }
@@ -148,7 +148,7 @@ function inicioGerente(d) {
 function pantallaMas(d) {
   const enlace = (href, txt) => h('li', {}, h('a', { class: 'item', href }, h('div', { class: 'grande' }, txt)));
   const lista = esGerente() ? [
-    enlace('#/ventas', '🧾 Ventas recientes'), enlace('#/gastos', '💸 Gastos recientes'), enlace('#/reposicion', '💔 Rotos y reposiciones'),
+    enlace('#/ventas', '🧾 Ventas recientes'), enlace('#/gastos', '💸 Gastos recientes'), enlace('#/reposicion', '💔 Reponer huevos rotos'),
     enlace('#/precios/general', '🏷️ Lista general de precios'), enlace('#/proveedores', '🚚 Proveedores'),
   ] : [];
   return h('div', {}, h('h1', {}, 'Más'), h('ul', { class: 'lista' }, lista),

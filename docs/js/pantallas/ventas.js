@@ -180,16 +180,17 @@ export function formReposicion(d, ctx) {
   const selCli = selector(opcionesClientes(d), { vacio: 'Elige el cliente…' });
   const cat = fichas(CATEGORIAS, { valor: 'A' });
   const cant = stepper({ min: 1, max: 3000, valor: 1 });
-  const tipo = fichas([{ valor: 'entrega', texto: 'Le repuse huevos' }, { valor: 'devolucion', texto: 'Me devolvió rotos' }], { valor: 'entrega' });
   const guardar = async () => {
-    if (!selCli.value) { aviso('Elige el cliente.'); return; }
-    const ok = await confirmar(`${nombreCliente(d, selCli.value)}\n${cant.get()} huevos ${cat.get()} (${tipo.get() === 'entrega' ? 'repuestos' : 'devueltos'}). Cuentan como pérdida.\n\n¿Guardar?`);
+    if (!selCli.value) { selCli.classList.add('error'); aviso('Elige el cliente.'); return; }
+    const ok = await confirmar(`Le repusiste a ${nombreCliente(d, selCli.value)}:\n${cant.get()} huevos ${cat.get()}\n\nSale de tu inventario y cuenta como pérdida.\n\n¿Guardar?`, { si: 'Sí, guardar' });
     if (!ok) return;
-    await crear('Reposiciones', 're', { cliente_id: selCli.value, categoria: cat.get(), huevos: cant.get(), tipo: tipo.get() });
+    // tipo 'entrega' = huevos buenos que salen para reponer los rotos. Los rotos que devuelve el cliente se botan y no se registran.
+    await crear('Reposiciones', 're', { cliente_id: selCli.value, categoria: cat.get(), huevos: cant.get(), tipo: 'entrega' });
     toast('✓ Guardado'); ctx.ir('#/');
   };
-  return h('div', {}, h('h1', {}, 'Rotos y reposiciones'), h('p', { class: 'suave' }, 'Huevos que repones o te devuelven por llegar rotos. Se cuentan como pérdida.'),
-    campo('Cliente', selCli), campo('Categoría', cat), campo('Cantidad de huevos', cant), campo('¿Qué pasó?', tipo), boton('Guardar', guardar, { clase: 'verde' }));
+  return h('div', {}, h('h1', {}, 'Reponer huevos rotos'),
+    h('p', { class: 'suave' }, 'Cuando un cliente reporta huevos rotos y le repones la misma cantidad. Sale de tu inventario y cuenta como pérdida. Los rotos que te devuelve se botan: no hay que registrarlos.'),
+    campo('Cliente', selCli), campo('Categoría de los huevos repuestos', cat), campo('¿Cuántos huevos le repusiste?', cant), boton('Guardar', guardar, { clase: 'verde' }));
 }
 
 export function listaVentas(d, ctx) {
