@@ -1,5 +1,5 @@
 // Service worker: deja la app disponible sin señal. Los datos viven en IndexedDB, no aquí.
-const VERSION = 'dy-0.1.3';
+const VERSION = 'dy-0.1.4';
 const ARCHIVOS = ['./', 'index.html', 'manifest.webmanifest', 'css/app.css', 'icons/icon-192.png', 'icons/icon-512.png', 'icons/apple-touch-icon.png',
   'js/app.js', 'js/api.js', 'js/calc.js', 'js/config.js', 'js/datos.js', 'js/store.js', 'js/ui.js',
   'js/pantallas/operario.js', 'js/pantallas/ventas.js', 'js/pantallas/gastos.js', 'js/pantallas/clientes.js', 'js/pantallas/resumen.js'];
@@ -14,7 +14,7 @@ self.addEventListener('activate', (e) => {
 self.addEventListener('fetch', (e) => {
   const req = e.request;
   if (req.method !== 'GET' || new URL(req.url).origin !== location.origin) return;
-  e.respondWith(fetch(req).then((r) => {
+  e.respondWith(fetch(req, { cache: 'no-cache' }).then((r) => { // no-cache: siempre revalida con el servidor, no usa la copia guardada por el navegador
     if (r.ok) { const copia = r.clone(); caches.open(VERSION).then((c) => c.put(req, copia)); }
     return r;
   }).catch(() => caches.match(req).then((r) => r || caches.match('index.html'))));
