@@ -56,6 +56,7 @@ class FakeSheet {
   getLastColumn() { return this.data.reduce((m, f) => Math.max(m, (f || []).length), 0); }
   getRange(r, c, nr = 1, nc = 1) { return new FakeRange(this, r, c, nr, nc); }
   setFrozenRows() {}
+  deleteColumn(c) { this.data.forEach((f) => { if (f) f.splice(c - 1, 1); }); }
 }
 
 export const sandboxOcupado = { valor: false };

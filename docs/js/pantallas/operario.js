@@ -1,6 +1,6 @@
 // Pantallas de campo: producción por lote, bodega y sanidad. Sin precios ni dinero.
 import { h, tarjeta, campo, stepper, fichas, selector, boton, confirmar, aviso, toast, aviso_caja, insignia } from '../ui.js';
-import { hoyISO, addDias, fmtFecha, fmtNum, num, activo, huevos, avesVivas, cruceBodega, resumenDia, retirosActivos, CATEGORIAS, COL_CAT } from '../calc.js';
+import { hoyISO, addDias, fmtFecha, fmtNum, num, activo, huevosProd, avesVivas, cruceBodega, resumenDia, retirosActivos, CATEGORIAS, COL_CAT } from '../calc.js';
 import { crear } from '../datos.js';
 
 const selFecha = (inicial, onChange) => {
@@ -39,7 +39,7 @@ export function listaLotes(d) {
     h('h1', {}, '¿Qué lote?'),
     h('ul', { class: 'lista' }, d.lotes.filter((l) => l.estado !== 'descartado').map((l) => {
       const regs = d.produccion.filter((p) => activo(p) && p.lote_id === l.id && p.fecha === hoy);
-      const huev = regs.reduce((a, p) => a + huevos(p.cubetas, p.sueltos), 0);
+      const huev = regs.reduce((a, p) => a + huevosProd(p), 0);
       return h('li', {}, h('a', { class: 'item', href: '#/produccion/' + l.id },
         h('div', {}, h('div', { class: 'grande' }, l.nombre), h('div', { class: 'suave' }, `${fmtNum(avesVivas(l, bajasDe(d, l.id)), 0)} aves`)),
         h('div', { class: 'derecha' }, regs.length ? h('span', { class: 'estado-ok' }, `✓ ${fmtNum(huev, 0)} huevos`) : h('span', { class: 'estado-falta' }, 'Falta'))));
@@ -52,8 +52,7 @@ export function formProduccion(d, loteId, ctx) {
   const lote = d.lotes.find((l) => l.id === loteId);
   if (!lote) return h('div', {}, aviso_caja('Lote no encontrado', 'rojo'));
   let fecha = hoyISO();
-  const cubetas = stepper({ min: 0, max: 200 });
-  const sueltos = stepper({ min: 0, max: 29 });
+  const recogidos = stepper({ min: 0, max: 2000 });
   const rotos = stepper({ min: 0, max: 500 });
   const bajas = stepper({ min: 0, max: 200 });
   const alimento = stepper({ min: 0, max: 500, paso: 0.5, decimales: 1 });
@@ -61,14 +60,14 @@ export function formProduccion(d, loteId, ctx) {
   const vivas = avesVivas(lote, bajasDe(d, lote.id));
 
   const guardar = async () => {
-    const c = cubetas.get(); const s = sueltos.get(); const r = rotos.get(); const b = bajas.get(); const a = alimento.get();
-    if (!c && !s && !r && !b && !a) { aviso('Todo está en cero. Si hoy no hubo nada, igual toca anotar al menos el alimento o las bajas.'); return; }
-    const total = huevos(c, s) + r;
+    const n = recogidos.get(); const r = rotos.get(); const b = bajas.get(); const a = alimento.get();
+    if (!n && !r && !b && !a) { aviso('Todo está en cero. Si hoy no hubo nada, igual toca anotar al menos el alimento o las bajas.'); return; }
+    const total = n + r;
     const avisos = [];
     if (vivas > 0 && total > vivas) avisos.push(`Anotaste ${total} huevos y el lote tiene ${vivas} aves: es más de 1 huevo por ave.`);
     const previos = d.produccion.filter((p) => activo(p) && p.lote_id === lote.id && p.fecha < fecha).sort((x, y) => y.fecha.localeCompare(x.fecha)).slice(0, 7);
     if (previos.length >= 3 && vivas > 0) {
-      const prom = previos.reduce((acc, p) => acc + huevos(p.cubetas, p.sueltos) + num(p.rotos_galpon), 0) / previos.length;
+      const prom = previos.reduce((acc, p) => acc + huevosProd(p) + num(p.rotos_galpon), 0) / previos.length;
       if (prom > 0 && total < prom * 0.6) avisos.push(`Es mucho menos de lo normal (normalmente ~${Math.round(prom)} huevos).`);
       if (prom > 0 && total > prom * 1.4) avisos.push(`Es mucho más de lo normal (normalmente ~${Math.round(prom)} huevos).`);
     }
@@ -76,10 +75,10 @@ export function formProduccion(d, loteId, ctx) {
     if (a > 0 && vivas > 0 && (a * 1000) / vivas > 160) avisos.push(`${a} kg de alimento son más de 160 g por ave.`);
     const repetido = d.produccion.some((p) => activo(p) && p.lote_id === lote.id && p.fecha === fecha);
     if (repetido) avisos.push('Este lote ya tiene un registro en esa fecha; este se SUMA al anterior.');
-    const resumen = `${lote.nombre} · ${fecha === hoyISO() ? 'hoy' : 'ayer'}\n\n🥚 ${c} cubetas y ${s} sueltos\n💔 ${r} rotos en el galpón\n🐔 ${b} bajas\n🌾 ${fmtNum(a, 1)} kg de alimento`;
+    const resumen = `${lote.nombre} · ${fecha === hoyISO() ? 'hoy' : 'ayer'}\n\n🥚 ${n} huevos recogidos\n💔 ${r} rotos en el galpón\n🐔 ${b} bajas\n🌾 ${fmtNum(a, 1)} kg de alimento`;
     const ok = await confirmar((avisos.length ? '⚠️ ' + avisos.join('\n⚠️ ') + '\n\n' : '') + resumen + '\n\n¿Guardar?', { si: 'Sí, guardar' });
     if (!ok) return;
-    await crear('Produccion', 'pr', { fecha, lote_id: lote.id, cubetas: c, sueltos: s, rotos_galpon: r, bajas: b, alimento_kg: a, notas: notas.value.trim() });
+    await crear('Produccion', 'pr', { fecha, lote_id: lote.id, huevos: n, cubetas: 0, sueltos: 0, rotos_galpon: r, bajas: b, alimento_kg: a, notas: notas.value.trim() });
     toast('✓ Guardado');
     ctx.ir('#/produccion');
   };
@@ -88,8 +87,7 @@ export function formProduccion(d, loteId, ctx) {
     h('h1', {}, lote.nombre),
     h('p', { class: 'suave' }, `${fmtNum(vivas, 0)} aves vivas`),
     campo('¿Qué día?', selFecha(fecha, (v) => { fecha = v; })),
-    campo('Cubetas completas recogidas', cubetas),
-    campo('Huevos sueltos (los que no completan cubeta)', sueltos),
+    campo('Huevos recogidos', recogidos, 'El total del lote, sin dividir en cubetas. Cuenta solo los huevos buenos; los rotos van en el siguiente campo.'),
     campo('Huevos rotos en el galpón', rotos),
     campo('Gallinas muertas (bajas)', bajas),
     campo('Alimento dado (kilos)', alimento, 'Puedes escribir decimales, por ejemplo 8,2. Un bulto son 40 kilos.'),

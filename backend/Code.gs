@@ -6,7 +6,7 @@
  * Pasos de instalación: ver docs/INSTALACION.md
  */
 
-const VERSION = '0.1.1';
+const VERSION = '0.1.2';
 const TOKEN_DIAS = 30;
 const MAX_FALLOS = 5;
 const BLOQUEO_SEG = 600;
@@ -27,8 +27,8 @@ const SCHEMA = {
     read: OP, write: GER, req: ['id', 'nombre'],
   },
   Produccion: {
-    cols: ['id', 'fecha', 'lote_id', 'cubetas', 'sueltos', 'rotos_galpon', 'bajas', 'alimento_kg', 'notas', 'usuario', 'ts', 'anulado', 'motivo'],
-    nums: ['cubetas', 'sueltos', 'rotos_galpon', 'bajas', 'alimento_kg', 'ts'], fechas: ['fecha'],
+    cols: ['id', 'fecha', 'lote_id', 'huevos', 'cubetas', 'sueltos', 'rotos_galpon', 'bajas', 'alimento_kg', 'notas', 'usuario', 'ts', 'anulado', 'motivo'],
+    nums: ['huevos', 'cubetas', 'sueltos', 'rotos_galpon', 'bajas', 'alimento_kg', 'ts'], fechas: ['fecha'],
     read: OP, write: OP, soloCrear: true, req: ['id', 'fecha', 'lote_id'],
   },
   Empaque: {

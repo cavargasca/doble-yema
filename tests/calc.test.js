@@ -269,3 +269,17 @@ test('fechas: hoyISO, inicioSemana, inicioMes, formato', () => {
   assert.equal(C.fmtFecha('2026-10-05'), '05/10/2026');
   assert.equal(C.fmtCOP(1250000), '$1.250.000');
 });
+
+test('producción: el galpón anota un solo total de huevos y los registros antiguos siguen contando', () => {
+  const produccion = [
+    { id: 'n', fecha: '2026-10-05', lote_id: 'l1', huevos: 190, cubetas: 0, sueltos: 0, rotos_galpon: 2, bajas: 0, alimento_kg: 8.2 },
+    { id: 'v', fecha: '2026-10-05', lote_id: 'l1', cubetas: 2, sueltos: 5 }, // formato anterior: 65 huevos
+  ];
+  assert.equal(C.huevosProd(produccion[0]), 190);
+  assert.equal(C.huevosProd(produccion[1]), 65);
+  const r = C.resumenDia(produccion, [], '2026-10-05');
+  assert.equal(r.huevosRecibidos, 255);
+  const c = C.cruceBodega(produccion, [{ id: 'e', fecha: '2026-10-05', b: 0, a: 8, aa: 0, aaa: 0, jumbo: 0, sueltos_bodega: 15, rotos_bodega: 0, descarte: 0 }], '2026-10-05');
+  assert.equal(c.recibidos, 255);
+  assert.equal(c.diferencia, 0); // 8 cubetas (240) + 15 sueltos
+});

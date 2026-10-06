@@ -47,6 +47,7 @@ function marco(titulo, contenido, { atras = true } = {}) {
   raiz.append(
     h('header', { class: 'barra-sup' },
       atras ? h('button', { class: 'atras', type: 'button', 'aria-label': 'Volver', onclick: () => history.back() }, '‹') : null,
+      atras ? h('a', { class: 'atras inicio', href: '#/', 'aria-label': 'Ir al inicio' }, '🏠') : null,
       h('div', { class: 'marca' }, '🥚 ' + titulo), chip),
     h('main', {}, contenido));
   window.scrollTo(0, 0);

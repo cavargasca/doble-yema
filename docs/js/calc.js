@@ -51,6 +51,9 @@ export function fmtFechaCorta(iso) {
 
 // ---------- huevos y cubetas ----------
 export const huevos = (cubetas, sueltos = 0) => num(cubetas) * HUEVOS_POR_CUBETA + num(sueltos);
+// Huevos buenos de un registro de producción. El galpón anota un solo total ("huevos");
+// los registros antiguos traían cubetas y sueltos, y también se siguen contando.
+export const huevosProd = (p) => num(p.huevos) + huevos(p.cubetas, p.sueltos);
 
 // ---------- precios por cliente ----------
 // Un registro de Precios: { cliente_id ('' = lista general), categoria, desde_cantidad (0 = precio base),
@@ -201,7 +204,7 @@ function bajasHasta(produccion, loteId, fecha) {
 export function cruceBodega(produccion, empaque, hasta) {
   const prod = produccion.filter((p) => activo(p) && p.fecha <= hasta);
   const emp = empaque.filter((e) => activo(e) && e.fecha <= hasta);
-  const recibidos = sum(prod, (p) => huevos(p.cubetas, p.sueltos));
+  const recibidos = sum(prod, (p) => huevosProd(p));
   const empacados = sum(emp, (e) => CATEGORIAS.reduce((a, c) => a + num(e[COL_CAT[c]]), 0)) * HUEVOS_POR_CUBETA;
   const rotosBodega = sum(emp, 'rotos_bodega');
   const descarte = sum(emp, 'descarte');
@@ -216,9 +219,7 @@ export function resumenDia(produccion, empaque, fecha) {
   const emp = empaque.filter((e) => activo(e) && e.fecha === fecha);
   return {
     lotesRegistrados: new Set(prod.map((p) => p.lote_id)).size,
-    cubetasRecogidas: sum(prod, 'cubetas'),
-    huevosSueltos: sum(prod, 'sueltos'),
-    huevosRecibidos: sum(prod, (p) => huevos(p.cubetas, p.sueltos)),
+    huevosRecibidos: sum(prod, (p) => huevosProd(p)),
     rotosGalpon: sum(prod, 'rotos_galpon'),
     bajas: sum(prod, 'bajas'),
     alimentoKg: sum(prod, 'alimento_kg'),
@@ -274,7 +275,7 @@ export function porLote(d, desde, hasta, cfg = {}) {
   const kgPrecio = precioKgAlimento(d.gastos, num(cfg.kg_por_bulto) || 40);
   return d.lotes.filter((l) => l.estado !== 'descartado').map((lote) => {
     const regs = d.produccion.filter((p) => activo(p) && p.lote_id === lote.id && p.fecha >= desde && p.fecha <= hasta);
-    const huevosTotal = sum(regs, (p) => huevos(p.cubetas, p.sueltos) + num(p.rotos_galpon));
+    const huevosTotal = sum(regs, (p) => huevosProd(p) + num(p.rotos_galpon));
     const avesDia = sum(regs, (p) => avesVivas(lote, bajasHasta(d.produccion, lote.id, p.fecha)));
     const bajas = sum(regs, 'bajas');
     const alimentoKg = sum(regs, 'alimento_kg');
@@ -310,7 +311,7 @@ export function indicadores(d, desde, hasta, cfg = {}) {
   const prod = d.produccion.filter((p) => activo(p) && en(p.fecha));
   const emp = d.empaque.filter((e) => activo(e) && en(e.fecha));
   const reps = d.reposiciones.filter((r) => activo(r) && en(r.fecha));
-  const huevosBuenos = sum(prod, (p) => huevos(p.cubetas, p.sueltos));
+  const huevosBuenos = sum(prod, (p) => huevosProd(p));
   const rotosGalpon = sum(prod, 'rotos_galpon');
   const rotosBodega = sum(emp, 'rotos_bodega');
   const descarte = sum(emp, 'descarte');

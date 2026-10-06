@@ -25,7 +25,7 @@ test('setup crea hojas, 15 lotes y configuración', () => {
     assert.ok(s.hojas.get(n), 'falta la hoja ' + n);
   }
   assert.equal(s.hojas.get('Lotes').getLastRow(), 16);
-  const enc = s.hojas.get('Produccion').getRange(1, 1, 1, 14).getValues()[0];
+  const enc = s.hojas.get('Produccion').getRange(1, 1, 1, 15).getValues()[0];
   assert.equal(enc[0], 'id');
   assert.equal(enc.at(-1), 'upd');
   // idempotente: correr setup otra vez no duplica nada
@@ -205,4 +205,19 @@ test('si el servidor está ocupado responde BUSY (reintentable) y luego guarda s
   const r2 = s.llamar({ action: 'sync', token: s.ope, records: [prod()] });
   assert.equal(r2.results[0].status, 'ok');
   assert.equal(s.hojas.get('Produccion').getLastRow(), 2);
+});
+
+test('producción con total de huevos: una hoja antigua sin la columna "huevos" la recibe sola', () => {
+  const s = preparar();
+  const hoja = s.hojas.get('Produccion');
+  // simula la hoja creada con la versión anterior: se quita la columna 'huevos'
+  const enc = hoja.getRange(1, 1, 1, hoja.getLastColumn()).getValues()[0];
+  const col = enc.indexOf('huevos') + 1;
+  assert.ok(col > 0);
+  hoja.deleteColumn(col);
+  const r = s.llamar({ action: 'sync', token: s.ope, records: [prod({ id: 'prod-h', huevos: 187, cubetas: 0, sueltos: 0 })] });
+  assert.equal(r.results[0].status, 'ok');
+  const pull = s.llamar({ action: 'pull', token: s.ope });
+  const fila = pull.tablas.Produccion.find((x) => x.id === 'prod-h');
+  assert.equal(Number(fila.huevos), 187);
 });

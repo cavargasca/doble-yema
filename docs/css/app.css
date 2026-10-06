@@ -32,7 +32,7 @@ body.sin-scroll { overflow: hidden; }
   padding: calc(env(safe-area-inset-top) + 8px) 12px 10px; display: flex; align-items: center; gap: 10px;
 }
 .barra-sup .marca { font-weight: 800; letter-spacing: 0.02em; flex: 1; font-size: 1.05rem; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.barra-sup .atras { background: transparent; border: 0; color: #fff; font-size: 1.6rem; width: 44px; height: 44px; border-radius: 12px; }
+.barra-sup .atras { display: inline-flex; align-items: center; justify-content: center; text-decoration: none; background: transparent; border: 0; color: #fff; font-size: 1.6rem; width: 44px; height: 44px; border-radius: 12px; }
 .estado-sync { font-size: 0.78rem; padding: 6px 10px; border-radius: 999px; background: rgba(255, 255, 255, 0.16); border: 0; color: #fff; white-space: nowrap; min-height: 34px; }
 .estado-sync.ok { background: #2f7d4f; }
 .estado-sync.pend { background: #c98b0b; }
