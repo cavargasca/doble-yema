@@ -54,13 +54,23 @@ await page.getByText('Pagó todo').click();
 await ok('Guardar venta');
 await page.locator('.modal').getByText('Total $30.000').waitFor();
 await page.getByRole('button', { name: 'Sí, guardar' }).click();
-await page.getByText('Comprobante de entrega').first().waitFor();
-paso('venta guardada y comprobante visible');
+await page.getByText('RECIBO DE CAJA').first().waitFor();
+await page.getByText('Son: Treinta mil pesos').waitFor();
+if (process.env.SHOT) await page.screenshot({ path: process.env.SHOT + '/recibo.png', fullPage: true });
+paso('venta guardada y recibo de caja visible');
 // ---- cobro / cliente ----
 await page.goto('http://localhost:8099/#/clientes/cl-1');
 await page.getByText('Al día').first().waitFor({ timeout: 3000 }).catch(() => {});
 await page.getByText('Último pago').first().waitFor();
 paso('detalle de cliente');
+// ---- pago con recibo de caja ----
+await page.goto('http://localhost:8099/#/cobro/cl-1');
+await page.locator('.dinero input').first().fill('5000');
+await page.getByRole('button', { name: 'Guardar pago' }).click();
+await page.getByRole('button', { name: 'Sí, guardar' }).click();
+await page.getByText('Son: Cinco mil pesos').waitFor();
+if (process.env.SHOT) await page.screenshot({ path: process.env.SHOT + '/recibo-pago.png', fullPage: true });
+paso('pago genera recibo de caja');
 // ---- gasto ----
 await page.goto('http://localhost:8099/#/gasto');
 await page.getByRole('radio', { name: 'Alimento' }).click();
@@ -99,7 +109,7 @@ await page.getByText('Tienda La Esquina').waitFor();
 paso('clientes y precios cargan');
 await page.waitForTimeout(1500);
 const v = s.hojas.get('Ventas'); const g = s.hojas.get('Gastos'); const c = s.hojas.get('Cobros');
-if (v.getLastRow() !== 2 || c.getLastRow() !== 2 || g.getLastRow() !== 2) throw new Error(`filas servidor: ventas ${v.getLastRow()} cobros ${c.getLastRow()} gastos ${g.getLastRow()}`);
+if (v.getLastRow() !== 2 || c.getLastRow() !== 3 || g.getLastRow() !== 2) throw new Error(`filas servidor: ventas ${v.getLastRow()} cobros ${c.getLastRow()} gastos ${g.getLastRow()}`);
 paso('el servidor recibió venta, cobro y gasto');
 
 // ---- operario sin conexión ----

@@ -79,6 +79,7 @@ export function formCliente(d, id, ctx) {
   if (id && !c) return h('div', {}, aviso_caja('Cliente no encontrado.', 'rojo'));
   const nombre = h('input', { class: 'input', type: 'text', value: c ? c.nombre : '', maxlength: 100, placeholder: 'Nombre o negocio' });
   const tel = h('input', { class: 'input', type: 'tel', value: c ? c.telefono : '', maxlength: 20, placeholder: '3001234567' });
+  const doc = h('input', { class: 'input', type: 'text', value: c ? c.documento || '' : '', maxlength: 30, placeholder: 'NIT o cédula (opcional)' });
   const dir = h('input', { class: 'input', type: 'text', value: c ? c.direccion : '', maxlength: 150 });
   const zona = h('input', { class: 'input', type: 'text', value: c ? c.zona : '', maxlength: 60, placeholder: 'Barrio o zona' });
   const cond = fichas([{ valor: 'contado', texto: 'De contado' }, { valor: 'semanal', texto: 'Cierre de semana' }, { valor: 'mensual', texto: 'Cierre de mes' }], { valor: (c && c.condicion_pago) || 'contado' });
@@ -86,11 +87,11 @@ export function formCliente(d, id, ctx) {
   const estado = fichas([{ valor: 'activo', texto: 'Activo' }, { valor: 'inactivo', texto: 'Inactivo' }], { valor: (c && c.estado) || 'activo' });
   const notas = h('input', { class: 'input', type: 'text', value: c ? c.notas : '', maxlength: 200 });
   return h('div', {}, h('h1', {}, c ? 'Editar cliente' : 'Cliente nuevo'),
-    campo('Nombre', nombre), campo('Teléfono (WhatsApp)', tel), campo('Dirección', dir), campo('Zona', zona), campo('¿Cuándo paga?', cond),
+    campo('Nombre', nombre), campo('Teléfono (WhatsApp)', tel), campo('NIT o cédula', doc, 'Sale en el recibo de caja; le sirve al cliente para su contabilidad.'), campo('Dirección', dir), campo('Zona', zona), campo('¿Cuándo paga?', cond),
     campo('Límite de deuda (opcional)', limite, 'Te avisamos si una venta lo supera. Vacío = sin límite.'), c ? campo('Estado', estado) : null, campo('Notas', notas),
     boton('Guardar', async () => {
       if (!nombre.value.trim()) { nombre.classList.add('error'); aviso('Falta el nombre.'); return; }
-      const rec = { ...(c || {}), id: c ? c.id : nuevoId('cl'), nombre: nombre.value.trim(), telefono: tel.value.trim(), direccion: dir.value.trim(), zona: zona.value.trim(), condicion_pago: cond.get(), limite_credito: limite.get(), estado: estado.get(), notas: notas.value.trim(), ts: Date.now() };
+      const rec = { ...(c || {}), id: c ? c.id : nuevoId('cl'), nombre: nombre.value.trim(), telefono: tel.value.trim(), documento: doc.value.trim(), direccion: dir.value.trim(), zona: zona.value.trim(), condicion_pago: cond.get(), limite_credito: limite.get(), estado: estado.get(), notas: notas.value.trim(), ts: Date.now() };
       await guardarCompleto('Clientes', rec);
       toast('✓ Guardado'); ctx.ir('#/clientes/' + rec.id);
     }, { clase: 'verde' }));

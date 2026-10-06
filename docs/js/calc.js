@@ -181,14 +181,46 @@ export function textoEstadoCuenta(negocio, cliente, ec, hoy) {
   return l.join('\n');
 }
 
+// Valor en letras para el recibo de caja: 30000 -> "Treinta mil pesos".
+export function valorEnLetras(n) {
+  n = Math.round(Math.abs(num(n)));
+  if (n === 0) return 'Cero pesos';
+  const U = ['', 'uno', 'dos', 'tres', 'cuatro', 'cinco', 'seis', 'siete', 'ocho', 'nueve', 'diez', 'once', 'doce', 'trece', 'catorce', 'quince', 'dieciséis', 'diecisiete', 'dieciocho', 'diecinueve', 'veinte', 'veintiuno', 'veintidós', 'veintitrés', 'veinticuatro', 'veinticinco', 'veintiséis', 'veintisiete', 'veintiocho', 'veintinueve'];
+  const D = ['', '', '', 'treinta', 'cuarenta', 'cincuenta', 'sesenta', 'setenta', 'ochenta', 'noventa'];
+  const C = ['', 'ciento', 'doscientos', 'trescientos', 'cuatrocientos', 'quinientos', 'seiscientos', 'setecientos', 'ochocientos', 'novecientos'];
+  const menor1000 = (x) => {
+    if (x === 100) return 'cien';
+    const c = Math.floor(x / 100); const r = x % 100;
+    const partes = [];
+    if (c) partes.push(C[c]);
+    if (r < 30) { if (r) partes.push(U[r]); } else { const d = Math.floor(r / 10); const u = r % 10; partes.push(u ? `${D[d]} y ${U[u]}` : D[d]); }
+    return partes.join(' ');
+  };
+  const grupo = (x, singular, plural) => (x === 1 ? singular : `${menor1000(x).replace(/veintiuno$/, 'veintiún').replace(/uno$/, 'un')} ${plural}`);
+  const millones = Math.floor(n / 1e6); const miles = Math.floor((n % 1e6) / 1000); const resto = n % 1000;
+  const p = [];
+  if (millones) p.push(grupo(millones, 'un millón', 'millones'));
+  if (miles) p.push(miles === 1 ? 'mil' : `${menor1000(miles).replace(/veintiuno$/, 'veintiún').replace(/uno$/, 'un')} mil`);
+  if (resto) p.push(menor1000(resto));
+  if (n === 1) return 'Un peso';
+  const txt = (p.join(' ') + ((n % 1e6 === 0 && n >= 1e6) ? ' de pesos' : ' pesos')).replace(/veintiuno pesos$/, 'veintiún pesos').replace(/uno pesos$/, 'un pesos');
+  return txt.charAt(0).toUpperCase() + txt.slice(1);
+}
+
 export function textoRecibo(negocio, cliente, venta, items, pagado) {
-  const l = [`*${negocio}* · Comprobante de entrega ${venta.numero || ''}`.trim(), `Cliente: ${cliente.nombre}`, `Fecha: ${fmtFecha(venta.fecha)}`, ''];
+  const l = [`*${negocio}* · Recibo de caja ${venta.numero || ''}`.trim(), `Cliente: ${cliente.nombre}`, `Fecha: ${fmtFecha(venta.fecha)}`, ''];
   for (const i of items) l.push(`• ${num(i.cubetas)} cubeta(s) ${i.categoria} × ${fmtCOP(i.precio_unit)} = ${fmtCOP(i.subtotal)}`);
   l.push('', `*Total: ${fmtCOP(venta.total)}*`);
-  if (pagado > 0) l.push(`Pagado: ${fmtCOP(pagado)}`);
-  if (num(venta.total) - pagado > 0) l.push(`Pendiente: ${fmtCOP(num(venta.total) - pagado)}`);
-  l.push('', '_Este comprobante no es factura de venta._');
+  if (pagado > 0) l.push(`Valor recibido: ${fmtCOP(pagado)}`);
+  if (num(venta.total) - pagado > 0) l.push(`Saldo pendiente: ${fmtCOP(num(venta.total) - pagado)}`);
+  l.push('', '_Recibo de caja de control interno. No es factura de venta._');
   return l.join('\n');
+}
+
+export function textoReciboPago(negocio, cliente, cobro, saldo) {
+  return [`*${negocio}* · Recibo de caja ${cobro.numero || ''}`.trim(), `Recibido de: ${cliente.nombre}`, `Fecha: ${fmtFecha(cobro.fecha)}`, '',
+    `*Valor recibido: ${fmtCOP(cobro.valor)}*`, `(${valorEnLetras(cobro.valor)})`, `Forma de pago: ${cobro.medio || ''}`,
+    saldo > 0 ? `Saldo pendiente: ${fmtCOP(saldo)}` : 'Cuenta al día.', '', '_Recibo de caja de control interno. No es factura de venta._'].join('\n');
 }
 
 // ---------- producción y bodega ----------

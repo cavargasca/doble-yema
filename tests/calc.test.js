@@ -302,3 +302,16 @@ test('gallinas de descarte: salen del lote, ingresan y entran al margen', () => 
   assert.ok(i.amortizacion > 0);
   assert.equal(i.margen, 100000 - i.costoTotal);
 });
+
+test('valorEnLetras', () => {
+  assert.equal(C.valorEnLetras(0), 'Cero pesos');
+  assert.equal(C.valorEnLetras(30000), 'Treinta mil pesos');
+  assert.equal(C.valorEnLetras(1000), 'Mil pesos');
+  assert.equal(C.valorEnLetras(121500), 'Ciento veintiún mil quinientos pesos');
+  assert.equal(C.valorEnLetras(2000000), 'Dos millones de pesos');
+  assert.equal(C.valorEnLetras(1250000), 'Un millón doscientos cincuenta mil pesos');
+  assert.equal(C.valorEnLetras(45), 'Cuarenta y cinco pesos');
+  assert.equal(C.valorEnLetras(100), 'Cien pesos');
+  assert.equal(C.valorEnLetras(1), 'Un peso'); assert.equal(C.valorEnLetras(31), 'Treinta y un pesos'); assert.equal(C.valorEnLetras(21), 'Veintiún pesos');
+  assert.equal(C.valorEnLetras(21000), 'Veintiún mil pesos');
+});

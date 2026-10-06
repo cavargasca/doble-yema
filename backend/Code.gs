@@ -6,7 +6,7 @@
  * Pasos de instalación: ver docs/INSTALACION.md
  */
 
-const VERSION = '0.1.5';
+const VERSION = '0.1.6';
 const TOKEN_DIAS = 30;
 const MAX_FALLOS = 5;
 const BLOQUEO_SEG = 600;
@@ -42,7 +42,7 @@ const SCHEMA = {
     read: OP, write: OP, soloCrear: true, req: ['id', 'fecha', 'producto'],
   },
   Clientes: {
-    cols: ['id', 'nombre', 'telefono', 'direccion', 'zona', 'condicion_pago', 'limite_credito', 'estado', 'notas', 'ts'],
+    cols: ['id', 'nombre', 'telefono', 'direccion', 'zona', 'condicion_pago', 'limite_credito', 'estado', 'notas', 'ts', 'documento'],
     nums: ['limite_credito', 'ts'], enums: { condicion_pago: ['contado', 'semanal', 'mensual'], estado: ['activo', 'inactivo'] },
     read: GER, write: GER, req: ['id', 'nombre'],
   },
@@ -100,6 +100,9 @@ const CONFIG_INICIAL = [
   ['amortizacion_aves_mensual', '0', 'Costo mensual de las aves repartido en su vida productiva (pesos)'],
   ['umbral_cliente_anterior_dias', '30', 'Días sin comprar para considerar "cliente anterior"'],
   ['margen_minimo_pct', '10', 'Margen mínimo esperado por cubeta (alerta si el precio queda por debajo)'],
+  ['nit_negocio', '', 'NIT o cédula del negocio (aparece en el recibo de caja)'],
+  ['telefono_negocio', '', 'Teléfono del negocio (aparece en el recibo)'],
+  ['direccion_negocio', '', 'Dirección o ciudad del negocio (aparece en el recibo)'],
   ['costo_ave', '27000', 'Lo que cuesta cada gallina al comprarla (pesos)'],
   ['precio_gallina_descarte', '20000', 'Precio habitual al vender una gallina de descarte (pesos)'],
   ['meses_vida_ave', '0', 'Meses de vida productiva de una gallina. Si pones un número, el costo de las aves se reparte automáticamente (0 = no calcular)'],

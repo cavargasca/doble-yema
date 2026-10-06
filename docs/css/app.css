@@ -163,6 +163,10 @@ table.tabla th { font-size: 0.78rem; color: var(--suave); text-transform: upperc
 .recibo { background: #fff; padding: 20px; border-radius: 12px; box-shadow: var(--sombra); }
 .recibo .cab { text-align: center; border-bottom: 2px solid var(--yema); padding-bottom: 10px; margin-bottom: 10px; }
 .recibo .cab .nombre { font-size: 1.6rem; font-weight: 900; color: var(--cafe); }
+.recibo .titulo-recibo { font-size: 1.15rem; font-weight: 900; letter-spacing: 0.12em; margin-top: 8px; }
+.recibo .letras { text-align: right; font-style: italic; color: var(--suave); font-size: 0.9rem; }
+.recibo .firmas { display: grid; grid-template-columns: 1fr 1fr; gap: 28px; margin-top: 46px; text-align: center; font-size: 0.8rem; color: var(--suave); }
+.recibo .firmas .linea { border-top: 1px solid var(--texto, #333); margin-bottom: 4px; }
 .recibo .pie { font-size: 0.8rem; color: var(--suave); text-align: center; margin-top: 14px; border-top: 1px dashed var(--linea); padding-top: 8px; }
 .recibo .total { font-size: 1.3rem; font-weight: 900; text-align: right; margin-top: 8px; }
 

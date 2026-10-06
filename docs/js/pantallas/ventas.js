@@ -1,6 +1,6 @@
 // Gerencia: ventas, cobros, recibo, reposiciones.
 import { h, tarjeta, campo, stepper, dinero, fichas, selector, boton, confirmar, aviso, toast, aviso_caja, pedirTexto, enlaceWhatsApp, compartirTexto, vaciar } from '../ui.js';
-import { hoyISO, fmtCOP, fmtNum, fmtFecha, fmtFechaCorta, num, activo, CATEGORIAS, precioPara, estadoCuenta, textoRecibo, inventarioCubetas, indicadores, addDias, retirosActivos } from '../calc.js';
+import { hoyISO, fmtCOP, fmtNum, fmtFecha, fmtFechaCorta, num, activo, CATEGORIAS, precioPara, estadoCuenta, textoRecibo, textoReciboPago, valorEnLetras, inventarioCubetas, indicadores, addDias, retirosActivos } from '../calc.js';
 import { crear, anular, nombreCliente } from '../datos.js';
 import { siguienteNumero } from '../store.js';
 
@@ -106,6 +106,17 @@ export function formVenta(d, clienteIdInicial, ctx) {
     boton('Guardar venta', guardar, { clase: 'verde' }));
 }
 
+// Encabezado y firmas comunes de los recibos de caja.
+function cabeceraRecibo(d, numero) {
+  const negocio = d.cfg.nombre_negocio || 'Doble Yema';
+  const datos = [d.cfg.nit_negocio ? 'NIT/CC ' + d.cfg.nit_negocio : '', d.cfg.telefono_negocio ? 'Tel. ' + d.cfg.telefono_negocio : '', d.cfg.direccion_negocio || ''].filter(Boolean).join(' · ');
+  return h('div', { class: 'cab' }, h('div', { class: 'nombre' }, '🥚 ' + negocio), datos ? h('div', { class: 'suave' }, datos) : null,
+    h('div', { class: 'titulo-recibo' }, 'RECIBO DE CAJA'), h('div', { class: 'suave' }, 'N.° ' + (numero || '')));
+}
+
+const firmas = () => h('div', { class: 'firmas' }, h('div', {}, h('div', { class: 'linea' }), 'Entregó'), h('div', {}, h('div', { class: 'linea' }), 'Recibí conforme (nombre y firma)'));
+const quien = (cl) => cl.nombre + (cl.documento ? ' · NIT/CC ' + cl.documento : '');
+
 export function recibo(d, ventaId, ctx) {
   const v = d.ventas.find((x) => x.id === ventaId);
   if (!v) return h('div', {}, aviso_caja('Venta no encontrada. Si acabas de crearla, espera un momento.', 'amarillo'));
@@ -114,20 +125,25 @@ export function recibo(d, ventaId, ctx) {
   const ec = estadoCuenta(cl, d.ventas, d.cobros, hoyISO());
   const ped = ec.pedidos.find((p) => p.id === v.id);
   const pagado = ped ? ped.pagado : 0;
+  const pendiente = Math.max(num(v.total) - pagado, 0);
   const negocio = d.cfg.nombre_negocio || 'Doble Yema';
   const texto = textoRecibo(negocio, cl, v, items, pagado);
   const anulada = !activo(v);
   return h('div', {},
     h('div', { class: 'recibo' },
-      h('div', { class: 'cab' }, h('div', { class: 'nombre' }, '🥚 ' + negocio), h('div', { class: 'suave' }, 'Comprobante de entrega ' + (v.numero || ''))),
-      anulada ? aviso_caja('ANULADA: ' + (v.motivo || ''), 'rojo') : null,
-      h('div', {}, h('b', {}, 'Cliente: '), cl.nombre), h('div', {}, h('b', {}, 'Fecha: '), fmtFecha(v.fecha)),
+      cabeceraRecibo(d, v.numero),
+      anulada ? aviso_caja('ANULADO: ' + (v.motivo || ''), 'rojo') : null,
+      h('div', {}, h('b', {}, 'Fecha: '), fmtFecha(v.fecha)),
+      h('div', {}, h('b', {}, 'Recibido de: '), quien(cl)),
+      h('div', {}, h('b', {}, 'Concepto: '), 'Venta de huevos, según el detalle'),
       h('table', { class: 'tabla', style: 'margin-top:10px' }, h('thead', {}, h('tr', {}, ['Producto', 'Cant.', 'Precio', 'Subtotal'].map((t) => h('th', {}, t)))),
-        h('tbody', {}, items.map((i) => h('tr', {}, h('td', {}, 'Huevo ' + i.categoria), h('td', {}, fmtNum(i.cubetas, 0)), h('td', {}, fmtCOP(i.precio_unit)), h('td', {}, fmtCOP(i.subtotal)))))),
+        h('tbody', {}, items.map((i) => h('tr', {}, h('td', {}, 'Huevo ' + i.categoria + ' (cubeta x30)'), h('td', {}, fmtNum(i.cubetas, 0)), h('td', {}, fmtCOP(i.precio_unit)), h('td', {}, fmtCOP(i.subtotal)))))),
       h('div', { class: 'total' }, 'Total ' + fmtCOP(v.total)),
-      pagado > 0 ? h('div', { style: 'text-align:right' }, 'Pagado ' + fmtCOP(pagado)) : null,
-      v.total - pagado > 0 ? h('div', { style: 'text-align:right; font-weight:700' }, 'Pendiente ' + fmtCOP(v.total - pagado)) : null,
-      h('div', { class: 'pie' }, 'Documento de control interno. No es factura de venta. Cantidades en cubetas de 30 huevos.')),
+      h('div', { style: 'text-align:right' }, 'Valor recibido ' + fmtCOP(pagado)),
+      pagado > 0 ? h('div', { class: 'letras' }, 'Son: ' + valorEnLetras(pagado)) : null,
+      pendiente > 0 ? h('div', { style: 'text-align:right; font-weight:700' }, 'Saldo pendiente ' + fmtCOP(pendiente)) : h('div', { style: 'text-align:right; font-weight:700; color:var(--verde)' }, 'Pagado completo'),
+      firmas(),
+      h('div', { class: 'pie' }, 'Recibo de caja de control interno. No es factura de venta.')),
     h('div', { class: 'no-imprimir' },
       h('div', { style: 'height:12px' }),
       cl.telefono ? h('a', { class: 'btn verde', href: enlaceWhatsApp(cl.telefono, texto), target: '_blank', rel: 'noopener' }, '📲 Enviar por WhatsApp') : boton('📲 Compartir', () => compartirTexto(texto), { clase: 'verde' }),
@@ -139,6 +155,36 @@ export function recibo(d, ventaId, ctx) {
         if (!m) return;
         await anular('Ventas', v.id, m); toast('Venta anulada'); ctx.refrescar();
       }, { clase: 'peligro chico' }) : null));
+}
+
+// Recibo de caja de un pago (abono o cancelación) que hace el cliente.
+export function reciboPago(d, cobroId, ctx) {
+  const c = d.cobros.find((x) => x.id === cobroId);
+  if (!c) return h('div', {}, aviso_caja('Pago no encontrado. Si acabas de crearlo, espera un momento.', 'amarillo'));
+  const cl = d.clientes.find((x) => x.id === c.cliente_id) || { nombre: '(cliente)' };
+  const ec = estadoCuenta(cl, d.ventas, d.cobros, hoyISO());
+  const negocio = d.cfg.nombre_negocio || 'Doble Yema';
+  const texto = textoReciboPago(negocio, cl, c, ec.saldo);
+  const anulado = !activo(c);
+  return h('div', {},
+    h('div', { class: 'recibo' },
+      cabeceraRecibo(d, c.numero),
+      anulado ? aviso_caja('ANULADO: ' + (c.motivo || ''), 'rojo') : null,
+      h('div', {}, h('b', {}, 'Fecha: '), fmtFecha(c.fecha)),
+      h('div', {}, h('b', {}, 'Recibido de: '), quien(cl)),
+      h('div', {}, h('b', {}, 'Concepto: '), 'Pago de huevos entregados'),
+      h('div', {}, h('b', {}, 'Forma de pago: '), c.medio || ''),
+      h('div', { class: 'total' }, 'Valor recibido ' + fmtCOP(c.valor)),
+      h('div', { class: 'letras' }, 'Son: ' + valorEnLetras(c.valor)),
+      ec.saldo > 0 ? h('div', { style: 'text-align:right; font-weight:700' }, 'Saldo pendiente actual ' + fmtCOP(ec.saldo)) : h('div', { style: 'text-align:right; font-weight:700; color:var(--verde)' }, 'Cuenta al día'),
+      c.notas ? h('div', { class: 'suave' }, 'Nota: ' + c.notas) : null,
+      firmas(),
+      h('div', { class: 'pie' }, 'Recibo de caja de control interno. No es factura de venta.')),
+    h('div', { class: 'no-imprimir' },
+      h('div', { style: 'height:12px' }),
+      cl.telefono ? h('a', { class: 'btn verde', href: enlaceWhatsApp(cl.telefono, texto), target: '_blank', rel: 'noopener' }, '📲 Enviar por WhatsApp') : boton('📲 Compartir', () => compartirTexto(texto), { clase: 'verde' }),
+      h('div', { style: 'height:10px' }),
+      h('div', { class: 'fila-botones' }, boton('🖨️ Imprimir', () => window.print(), { clase: 'secundario' }), boton('Ir al cliente', () => ctx.ir('#/clientes/' + cl.id), { clase: 'secundario' }))));
 }
 
 export function formCobro(d, clienteIdInicial, ctx) {
@@ -169,9 +215,9 @@ export function formCobro(d, clienteIdInicial, ctx) {
     if (v > e.saldo) avisos.push(`Está pagando más de lo que debe (${fmtCOP(e.saldo)}). La diferencia queda a favor del cliente.`);
     const ok = await confirmar((avisos.length ? '⚠️ ' + avisos.join('\n⚠️ ') + '\n\n' : '') + `${cl.nombre} pagó ${fmtCOP(v)} por ${medio}.\nQuedará debiendo ${fmtCOP(Math.max(e.saldo - v, 0))}.\n\n¿Guardar el pago?`, { si: 'Sí, guardar' });
     if (!ok) return;
-    await crear('Cobros', 'co', { numero: await siguienteNumero('C'), fecha: fecha.get(), cliente_id: cl.id, valor: v, medio, notas: notas.value.trim() });
+    const cobro = await crear('Cobros', 'co', { numero: await siguienteNumero('C'), fecha: fecha.get(), cliente_id: cl.id, valor: v, medio, notas: notas.value.trim() });
     toast('✓ Pago guardado');
-    ctx.ir('#/clientes/' + cl.id);
+    ctx.ir('#/recibo-pago/' + cobro.id);
   };
   return h('div', {}, h('h1', {}, 'Registrar pago'), campo('Cliente', selCli), info, campo('Fecha', fecha), campo('Valor recibido', valor), campo('Medio', medios), campo('Notas', notas), boton('Guardar pago', guardar, { clase: 'verde' }));
 }

@@ -8,7 +8,7 @@ Aplicación gratuita (PWA) para registrar producción, bodega, ventas, cobros y 
 
 > Los datos **nunca** se guardan en este repositorio: viven en la hoja de Google del negocio. El repositorio solo tiene el código.
 
-> Los comprobantes que genera la app se llaman "Comprobante de entrega" y son de control interno; **no son factura de venta**.
+> Los comprobantes que genera la app se llaman "Recibo de caja" y son de control interno; **no son factura de venta**.
 
 ## Instalación
 Sigue `INSTALACION.md`.

@@ -1,5 +1,5 @@
 // Service worker: deja la app disponible sin señal. Los datos viven en IndexedDB, no aquí.
-const VERSION = 'dy-0.1.9';
+const VERSION = 'dy-0.1.10';
 const ARCHIVOS = ['./', 'index.html', 'manifest.webmanifest', 'css/app.css', 'icons/icon-192.png', 'icons/icon-512.png', 'icons/apple-touch-icon.png',
   'js/app.js', 'js/api.js', 'js/calc.js', 'js/config.js', 'js/datos.js', 'js/store.js', 'js/ui.js',
   'js/pantallas/operario.js', 'js/pantallas/ventas.js', 'js/pantallas/gastos.js', 'js/pantallas/clientes.js', 'js/pantallas/resumen.js'];

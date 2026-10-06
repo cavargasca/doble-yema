@@ -105,7 +105,8 @@ async function renderizar({ conservar = false } = {}) {
     else if (a === 'bodega') { titulo = 'Bodega'; vista = Op.formBodega(d, ctx); }
     else if (a === 'sanidad') { titulo = 'Sanidad'; vista = Op.formSanidad(d, ctx); }
     else if (a === 'venta') { titulo = 'Venta'; vista = soloGer(() => Ve.formVenta(d, b, ctx)); }
-    else if (a === 'recibo') { titulo = 'Comprobante'; vista = soloGer(() => Ve.recibo(d, b, ctx)); }
+    else if (a === 'recibo') { titulo = 'Recibo'; vista = soloGer(() => Ve.recibo(d, b, ctx)); }
+    else if (a === 'recibo-pago') { titulo = 'Recibo'; vista = soloGer(() => Ve.reciboPago(d, b, ctx)); }
     else if (a === 'cobro') { titulo = 'Pago'; vista = soloGer(() => Ve.formCobro(d, b, ctx)); }
     else if (a === 'reposicion') { titulo = 'Reponer rotos'; vista = soloGer(() => Ve.formReposicion(d, ctx)); }
     else if (a === 'ventas') { titulo = 'Ventas'; vista = soloGer(() => Ve.listaVentas(d, ctx)); }
